@@ -13,7 +13,7 @@ export default function Appointments() {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/appointments');
+      const res = await api.get('/doctors/appointments/all');
       setAppointments(res.data);
       setError(null);
     } catch (err) {
@@ -77,8 +77,8 @@ export default function Appointments() {
                   appointments.map((apt) => (
                     <tr key={apt.appointment_id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-bold text-slate-900">{new Date(apt.appointment_date).toLocaleDateString()}</div>
-                        <div className="text-sm text-slate-500">{new Date(apt.appointment_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                        <div className="text-sm font-bold text-slate-900">{new Date(apt.scheduled_at).toLocaleDateString()}</div>
+                        <div className="text-sm text-slate-500">{new Date(apt.scheduled_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-slate-900">{apt.patient_name}</div>

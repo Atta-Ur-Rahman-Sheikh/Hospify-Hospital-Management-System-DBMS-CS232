@@ -13,6 +13,22 @@ def _row(cur):
     return [dict(zip(cols, r)) for r in cur.fetchall()]
 
 
+@billing_bp.get("/")
+@jwt_required_custom
+def list_bills():
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute(
+            """SELECT b.*, p.full_name AS patient_name, u.full_name AS generated_by_name
+                 FROM bills b
+                 JOIN admissions a ON a.admission_id = b.admission_id
+                 JOIN patients p ON p.patient_id = a.patient_id
+                 LEFT JOIN users u ON u.user_id = b.generated_by
+                ORDER BY b.generated_at DESC"""
+        )
+        return jsonify(_row(cur)), 200
+
+
 @billing_bp.get("/<int:admission_id>")
 @jwt_required_custom
 def get_bill(admission_id):

@@ -60,6 +60,23 @@ def doctor_schedule(did):
 
 # ── APPOINTMENTS ───────────────────────────────────────────────────────────
 
+@doctors_bp.get("/appointments/all")
+@jwt_required_custom
+def list_all_appointments():
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute(
+            """SELECT ap.*, p.full_name AS patient_name, p.phone AS patient_phone,
+                      u.full_name AS doctor_name
+                 FROM appointments ap
+                 JOIN patients p ON p.patient_id = ap.patient_id
+                 JOIN doctors d ON d.doctor_id = ap.doctor_id
+                 JOIN users u ON u.user_id = d.user_id
+                ORDER BY ap.scheduled_at DESC"""
+        )
+        return jsonify(_row(cur)), 200
+
+
 @doctors_bp.get("/<int:did>/appointments")
 @jwt_required_custom
 def list_appointments(did):

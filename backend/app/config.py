@@ -41,4 +41,4 @@ class Config:
     GEMINI_MODEL   = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
     # ── CORS ─────────────────────────────────────────────────
-    CORS_ORIGINS = ["http://localhost:5173", "http://localhost:3000"]
+    CORS_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"]

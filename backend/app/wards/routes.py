@@ -20,7 +20,19 @@ def _row(cur):
 def list_wards():
     conn = get_db()
     with conn.cursor() as cur:
-        cur.execute("SELECT * FROM ward_occupancy_view ORDER BY ward_name")
+        cur.execute(
+            """SELECT w.ward_id, w.ward_name, w.ward_type, w.floor_number, w.total_beds,
+                      COALESCE(
+                          json_agg(json_build_object(
+                              'bed_id', b.bed_id, 'bed_number', b.bed_number, 
+                              'bed_type', b.bed_type, 'status', b.status
+                          ) ORDER BY b.bed_number) FILTER (WHERE b.bed_id IS NOT NULL), '[]'::json
+                      ) AS beds
+                 FROM wards w
+                 LEFT JOIN beds b ON b.ward_id = w.ward_id
+                GROUP BY w.ward_id
+                ORDER BY w.ward_name"""
+        )
         return jsonify(_row(cur)), 200
 
 

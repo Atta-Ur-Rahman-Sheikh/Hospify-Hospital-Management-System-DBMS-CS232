@@ -13,7 +13,7 @@ export default function Lab() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/lab');
+      const res = await api.get('/lab/orders/all');
       setOrders(res.data);
       setError(null);
     } catch (err) {

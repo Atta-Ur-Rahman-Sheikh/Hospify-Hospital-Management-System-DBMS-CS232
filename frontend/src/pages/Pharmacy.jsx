@@ -14,7 +14,7 @@ export default function Pharmacy() {
   const fetchInventory = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/pharmacy/inventory');
+      const res = await api.get('/pharmacy/medicines');
       setInventory(res.data);
       setError(null);
     } catch (err) {

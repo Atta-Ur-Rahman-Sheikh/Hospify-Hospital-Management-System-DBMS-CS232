@@ -24,6 +24,13 @@ def init_firebase(app):
         )
         return
 
+    # Check if the file is a placeholder to avoid cryptography crash
+    with open(creds_path, 'r') as f:
+        content = f.read()
+        if "PLACEHOLDER_REPLACE_WITH_REAL_KEY" in content:
+            app.logger.warning("Firebase serviceAccountKey.json is a placeholder. Firebase features disabled.")
+            return
+
     try:
         cred = credentials.Certificate(creds_path)
         _fb_app = firebase_admin.initialize_app(cred, {

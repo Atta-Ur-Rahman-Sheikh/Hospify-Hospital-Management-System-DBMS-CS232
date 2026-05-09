@@ -28,7 +28,7 @@ export default function Admissions() {
     if (!window.confirm("Are you sure you want to discharge this patient? This will generate a final bill and free the bed.")) return;
     
     try {
-      await api.patch(`/admissions/${admissionId}/discharge`);
+      await api.post(`/admissions/${admissionId}/discharge`);
       // Refresh list
       fetchAdmissions();
     } catch (err) {
