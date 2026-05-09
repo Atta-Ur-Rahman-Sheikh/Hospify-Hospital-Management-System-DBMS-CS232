@@ -1,0 +1,11 @@
+.env
+prompt.md
+test_connection_firebase.py
+test_connection_gemini_db.py
+.venv
+backend/serviceAccountKey.json
+__pycache__/
+*.pyc
+node_modules/
+dist/
+.DS_Store
