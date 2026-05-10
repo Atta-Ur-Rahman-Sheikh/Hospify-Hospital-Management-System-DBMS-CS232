@@ -1,121 +1,194 @@
-import { useState, useEffect } from 'react';
-import api from '../api/axios';
+import { useMemo, useState } from 'react';
+import {
+  Pill,
+  Search,
+  AlertTriangle,
+  CheckCircle2,
+  RefreshCw,
+  Package,
+  Plus,
+} from 'lucide-react';
+import { useMedicines } from '../hooks/usePharmacy';
+import PageHeader from '../components/ui/PageHeader';
+import { Card } from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import Badge from '../components/ui/Badge';
+import Input from '../components/ui/Input';
+import EmptyState from '../components/ui/EmptyState';
+import { Table, THead, TBody, TR, TH, TD } from '../components/ui/Table';
+import { SkeletonTable } from '../components/ui/Skeleton';
+import StatCard from '../components/ui/StatCard';
+import { cn } from '../lib/cn';
 
 export default function Pharmacy() {
-  const [inventory, setInventory] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { data: inventory = [], isLoading, isError, refetch, isRefetching } =
+    useMedicines();
   const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all'); // all | low | in
 
-  useEffect(() => {
-    fetchInventory();
-  }, []);
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return inventory.filter((m) => {
+      const isLow = m.quantity_available <= m.reorder_level;
+      if (filter === 'low' && !isLow) return false;
+      if (filter === 'in' && isLow) return false;
+      if (!q) return true;
+      return (
+        m.generic_name?.toLowerCase().includes(q) ||
+        m.brand_name?.toLowerCase().includes(q) ||
+        m.category?.toLowerCase().includes(q)
+      );
+    });
+  }, [inventory, search, filter]);
 
-  const fetchInventory = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get('/pharmacy/medicines');
-      setInventory(res.data);
-      setError(null);
-    } catch (err) {
-      setError('Failed to load pharmacy inventory.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredInventory = inventory.filter(item => 
-    item.generic_name.toLowerCase().includes(search.toLowerCase()) ||
-    item.brand_name.toLowerCase().includes(search.toLowerCase()) ||
-    item.category.toLowerCase().includes(search.toLowerCase())
-  );
+  const stats = useMemo(() => {
+    const total = inventory.length;
+    const low = inventory.filter((m) => m.quantity_available <= m.reorder_level).length;
+    const sumStock = inventory.reduce((s, m) => s + Number(m.quantity_available || 0), 0);
+    return { total, low, sumStock };
+  }, [inventory]);
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-heading font-bold text-slate-900">Pharmacy Inventory</h1>
-        <button className="btn-primary">
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-          Restock Items
-        </button>
+      <PageHeader
+        title="Pharmacy"
+        description="Track medicine stock and re-order alerts."
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              leftIcon={<RefreshCw className={isRefetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />}
+              onClick={() => refetch()}
+            >
+              Refresh
+            </Button>
+            <Button leftIcon={<Plus className="h-4 w-4" />} variant="secondary" disabled>
+              Restock
+            </Button>
+          </>
+        }
+      />
+
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
+        <StatCard
+          label="Items in catalog"
+          value={stats.total}
+          icon={Package}
+          tone="brand"
+          loading={isLoading}
+        />
+        <StatCard
+          label="Total units in stock"
+          value={stats.sumStock.toLocaleString()}
+          icon={Pill}
+          tone="vital"
+          loading={isLoading}
+        />
+        <StatCard
+          label="Low stock items"
+          value={stats.low}
+          icon={AlertTriangle}
+          tone={stats.low > 0 ? 'warn' : 'vital'}
+          loading={isLoading}
+          hint="At or below reorder level"
+        />
       </div>
 
-      <div className="card p-4">
-        <div className="relative max-w-md">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg className="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-          </div>
-          <input
-            type="text"
-            className="input-field pl-10"
-            placeholder="Search by generic, brand, or category..."
+      <Card className="p-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Input
+            placeholder="Search by generic, brand, or category…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            leftIcon={<Search className="h-4 w-4" />}
+            containerClassName="flex-1"
           />
-        </div>
-      </div>
-
-      {error && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-xl border border-red-200">
-          {error}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Medicine Name</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Category</th>
-                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Stock Level</th>
-                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-slate-200">
-                {filteredInventory.length === 0 ? (
-                  <tr>
-                    <td colSpan="5" className="px-6 py-8 text-center text-slate-500">
-                      No medicines found.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredInventory.map((item) => (
-                    <tr key={item.medicine_id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-slate-900">{item.brand_name}</div>
-                        <div className="text-sm text-slate-500">{item.generic_name} ({item.unit})</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                        {item.category}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <div className="text-sm font-bold text-slate-900">{item.quantity_available}</div>
-                        <div className="text-xs text-slate-500">Reorder: {item.reorder_level}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        {item.quantity_available <= item.reorder_level ? (
-                          <span className="badge badge-danger">Low Stock</span>
-                        ) : (
-                          <span className="badge badge-success">In Stock</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button className="text-primary-600 hover:text-primary-900">Update Stock</button>
-                      </td>
-                    </tr>
-                  ))
+          <div className="inline-flex rounded-lg border border-ink-500/50 bg-ink-800 p-1 self-start">
+            {[
+              { id: 'all', label: 'All' },
+              { id: 'in',  label: 'In stock' },
+              { id: 'low', label: 'Low' },
+            ].map((opt) => (
+              <button
+                key={opt.id}
+                onClick={() => setFilter(opt.id)}
+                className={cn(
+                  'px-3 py-1.5 rounded-md text-xs font-semibold transition-colors',
+                  filter === opt.id
+                    ? 'bg-brand-600 text-white shadow'
+                    : 'text-ink-100 hover:text-white'
                 )}
-              </tbody>
-            </table>
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
         </div>
+      </Card>
+
+      {isLoading ? (
+        <SkeletonTable rows={8} cols={5} />
+      ) : isError ? (
+        <EmptyState icon={Pill} title="Couldn't load inventory" />
+      ) : filtered.length === 0 ? (
+        <EmptyState icon={Pill} title="No medicines match your search" />
+      ) : (
+        <Table>
+          <THead>
+            <TR hoverable={false}>
+              <TH>Medicine</TH>
+              <TH>Category</TH>
+              <TH align="center">Stock</TH>
+              <TH align="center">Status</TH>
+              <TH align="right">Actions</TH>
+            </TR>
+          </THead>
+          <TBody>
+            {filtered.map((m) => {
+              const isLow = m.quantity_available <= m.reorder_level;
+              return (
+                <TR key={m.medicine_id}>
+                  <TD>
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-lg bg-brand-500/15 ring-1 ring-brand-500/30 flex items-center justify-center">
+                        <Pill className="h-4 w-4 text-brand-300" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-white">{m.brand_name}</p>
+                        <p className="text-xs text-ink-200">
+                          {m.generic_name} {m.unit && `· ${m.unit}`}
+                        </p>
+                      </div>
+                    </div>
+                  </TD>
+                  <TD>
+                    <Badge tone="neutral" size="sm">{m.category}</Badge>
+                  </TD>
+                  <TD align="center">
+                    <p className="font-bold text-white tabular-nums">{m.quantity_available}</p>
+                    <p className="text-[11px] text-ink-200">Reorder ≤ {m.reorder_level}</p>
+                  </TD>
+                  <TD align="center">
+                    {isLow ? (
+                      <Badge tone="danger" size="sm">
+                        <AlertTriangle className="h-3 w-3" />
+                        Low stock
+                      </Badge>
+                    ) : (
+                      <Badge tone="success" size="sm">
+                        <CheckCircle2 className="h-3 w-3" />
+                        In stock
+                      </Badge>
+                    )}
+                  </TD>
+                  <TD align="right">
+                    <Button size="sm" variant="ghost">Update</Button>
+                  </TD>
+                </TR>
+              );
+            })}
+          </TBody>
+        </Table>
       )}
     </div>
   );

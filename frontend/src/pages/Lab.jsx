@@ -1,92 +1,222 @@
-import { useState, useEffect } from 'react';
-import api from '../api/axios';
+import { useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+import {
+  FlaskConical,
+  Search,
+  RefreshCw,
+  Stethoscope,
+  ClipboardList,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+} from 'lucide-react';
+import { useAuth } from '../context/auth-context';
+import { useLabOrders, useUpdateLabOrderStatus } from '../hooks/useLab';
+import PageHeader from '../components/ui/PageHeader';
+import { Card, CardBody, CardHeader } from '../components/ui/Card';
+import Badge from '../components/ui/Badge';
+import Button from '../components/ui/Button';
+import Avatar from '../components/ui/Avatar';
+import Input from '../components/ui/Input';
+import EmptyState from '../components/ui/EmptyState';
+import Skeleton from '../components/ui/Skeleton';
+import { useToast } from '../components/ui/useToast';
+import { cn } from '../lib/cn';
+
+const PRIORITY_TONE = {
+  stat:    'danger',
+  urgent:  'warning',
+  routine: 'info',
+};
+
+const STATUS_TONE = {
+  pending:     'warning',
+  in_progress: 'info',
+  completed:   'success',
+  cancelled:   'neutral',
+};
+
+const CAN_UPDATE = ['super_admin', 'lab_technician'];
 
 export default function Lab() {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { user } = useAuth();
+  const canUpdate = CAN_UPDATE.includes(user?.role);
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
+  const { data: orders = [], isLoading, isError, refetch, isRefetching } = useLabOrders();
+  const updateStatus = useUpdateLabOrderStatus();
+  const toast = useToast();
 
-  const fetchOrders = async () => {
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return orders.filter((o) => {
+      if (statusFilter !== 'all' && o.status !== statusFilter) return false;
+      if (!q) return true;
+      return (
+        o.test_name?.toLowerCase().includes(q) ||
+        o.patient_name?.toLowerCase().includes(q) ||
+        o.doctor_name?.toLowerCase().includes(q)
+      );
+    });
+  }, [orders, search, statusFilter]);
+
+  const counts = useMemo(() => {
+    const c = { pending: 0, in_progress: 0, completed: 0, cancelled: 0 };
+    orders.forEach((o) => { if (c[o.status] != null) c[o.status]++; });
+    return c;
+  }, [orders]);
+
+  const setStatus = async (id, status) => {
+    if (!canUpdate) return;
     try {
-      setLoading(true);
-      const res = await api.get('/lab/orders/all');
-      setOrders(res.data);
-      setError(null);
+      await updateStatus.mutateAsync({ id, status });
+      toast.success(`Marked as ${status}`);
     } catch (err) {
-      setError('Failed to load lab orders.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'stat': return 'text-red-700 bg-red-100 border-red-200';
-      case 'urgent': return 'text-orange-700 bg-orange-100 border-orange-200';
-      default: return 'text-blue-700 bg-blue-100 border-blue-200';
+      toast.error('Update failed', err.response?.data?.error || 'Unknown error');
     }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-heading font-bold text-slate-900">Laboratory Orders</h1>
-      </div>
+      <PageHeader
+        title="Laboratory Orders"
+        description="Track tests ordered by physicians and dispatch results."
+        actions={
+          <Button
+            variant="secondary"
+            leftIcon={<RefreshCw className={isRefetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />}
+            onClick={() => refetch()}
+          >
+            Refresh
+          </Button>
+        }
+      />
 
-      {error && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-xl border border-red-200">
-          {error}
+      <Card className="p-3">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Input
+            placeholder="Search by test, patient, or doctor…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            leftIcon={<Search className="h-4 w-4" />}
+            containerClassName="flex-1"
+          />
+          <div className="inline-flex rounded-lg border border-ink-500/50 bg-ink-800 p-1 self-start overflow-x-auto">
+            {[
+              { id: 'all',         label: `All (${orders.length})` },
+              { id: 'pending',     label: `Pending (${counts.pending})` },
+              { id: 'in_progress', label: `In progress (${counts.in_progress})` },
+              { id: 'completed',   label: `Completed (${counts.completed})` },
+            ].map((opt) => (
+              <button
+                key={opt.id}
+                onClick={() => setStatusFilter(opt.id)}
+                className={cn(
+                  'px-3 py-1.5 rounded-md text-xs font-semibold whitespace-nowrap transition-colors',
+                  statusFilter === opt.id
+                    ? 'bg-brand-600 text-white shadow'
+                    : 'text-ink-100 hover:text-white'
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
-      )}
+      </Card>
 
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      {isLoading ? (
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="p-5 space-y-3">
+              <Skeleton className="h-5 w-1/2" />
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-4 w-1/3" />
+            </Card>
+          ))}
         </div>
+      ) : isError ? (
+        <EmptyState icon={FlaskConical} title="Couldn't load lab orders" />
+      ) : filtered.length === 0 ? (
+        <EmptyState icon={ClipboardList} title="No lab orders found" description="Try changing filters or check back later." />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {orders.length === 0 ? (
-            <div className="col-span-full card p-8 text-center text-slate-500">
-              No lab orders found.
-            </div>
-          ) : (
-            orders.map((order) => (
-              <div key={order.order_id} className="card flex flex-col">
-                <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                  <div className="font-semibold text-slate-900 uppercase tracking-wide text-sm">{order.test_name}</div>
-                  <span className={`px-2 py-1 text-xs font-bold uppercase rounded border ${getPriorityColor(order.priority)}`}>
-                    {order.priority}
-                  </span>
-                </div>
-                <div className="p-4 flex-1">
-                  <div className="mb-4">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">Patient</p>
-                    <p className="text-sm font-medium text-slate-900">{order.patient_name}</p>
-                    <p className="text-xs text-slate-500">Admitted in: {order.ward_name}</p>
-                  </div>
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+          {filtered.map((o, i) => (
+            <motion.div
+              key={o.order_id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, delay: i * 0.02 }}
+            >
+              <Card hoverable className="overflow-hidden">
+                <CardHeader>
                   <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-1">Ordered By</p>
-                    <p className="text-sm text-slate-800">{order.doctor_name}</p>
-                    <p className="text-xs text-slate-500">{new Date(order.ordered_at).toLocaleString()}</p>
+                    <p className="text-[10px] uppercase tracking-widest text-ink-300 font-semibold">
+                      Order #{o.order_id}
+                    </p>
+                    <p className="font-semibold text-white text-base mt-0.5 truncate">
+                      {o.test_name}
+                    </p>
                   </div>
-                </div>
-                <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
-                  <span className={`badge ${order.status === 'completed' ? 'badge-success' : 'badge-warning'}`}>
-                    {order.status}
-                  </span>
-                  {order.status === 'pending' ? (
-                    <button className="btn-primary py-1.5 px-3 text-sm">Enter Results</button>
-                  ) : (
-                    <button className="btn-secondary py-1.5 px-3 text-sm">View Report</button>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
+                  <Badge tone={PRIORITY_TONE[o.priority] || 'neutral'} size="sm">
+                    {o.priority}
+                  </Badge>
+                </CardHeader>
+                <CardBody className="space-y-3.5">
+                  <div className="flex items-center gap-2.5">
+                    <Avatar name={o.patient_name} size="sm" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{o.patient_name}</p>
+                      <p className="text-xs text-ink-200 truncate">
+                        {o.ward_name ? `Ward: ${o.ward_name}` : 'Outpatient'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-ink-200">
+                    <Stethoscope className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">Ordered by {o.doctor_name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-ink-200">
+                    <Clock className="h-3.5 w-3.5 shrink-0" />
+                    <span>{new Date(o.ordered_at).toLocaleString()}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-2 border-t border-ink-500/30">
+                    <Badge tone={STATUS_TONE[o.status] || 'neutral'} size="sm">
+                      {o.status?.replace('_', ' ')}
+                    </Badge>
+                    {canUpdate ? (
+                      o.status === 'pending' ? (
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          leftIcon={<AlertCircle className="h-3.5 w-3.5" />}
+                          onClick={() => setStatus(o.order_id, 'in_progress')}
+                        >
+                          Start
+                        </Button>
+                      ) : o.status === 'in_progress' ? (
+                        <Button
+                          size="sm"
+                          variant="success"
+                          leftIcon={<CheckCircle2 className="h-3.5 w-3.5" />}
+                          onClick={() => setStatus(o.order_id, 'completed')}
+                        >
+                          Complete
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="ghost">View report</Button>
+                      )
+                    ) : (
+                      <Button size="sm" variant="ghost">View</Button>
+                    )}
+                  </div>
+                </CardBody>
+              </Card>
+            </motion.div>
+          ))}
         </div>
       )}
     </div>
