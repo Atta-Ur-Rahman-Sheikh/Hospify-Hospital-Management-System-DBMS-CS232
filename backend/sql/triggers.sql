@@ -181,3 +181,55 @@ DROP TRIGGER IF EXISTS trg_abnormal_vitals ON vitals;
 CREATE TRIGGER trg_abnormal_vitals
     AFTER INSERT ON vitals
     FOR EACH ROW EXECUTE FUNCTION fn_abnormal_vitals_alert();
+
+-- ------------------------------------------------------------
+-- TRIGGER 7: On users INSERT OR UPDATE → notify Firebase listener
+--
+-- How it works:
+--   1. This trigger fires AFTER every INSERT or UPDATE on the users table.
+--   2. The function builds a JSON payload from the NEW row using json_build_object
+--      (password_hash is intentionally excluded for security).
+--   3. pg_notify() sends that payload on the 'user_changes' channel.
+--   4. A Python listener (backend/app/firebase_sync/pg_listener.py) runs
+--      LISTEN user_changes and forwards each notification to Firebase Firestore
+--      at path /users/{user_id}.
+--
+-- pg_notify payload limit: 8000 bytes. password_hash is omitted to stay well
+-- under that limit and to avoid leaking hashes over the notification channel.
+-- ------------------------------------------------------------
+CREATE OR REPLACE FUNCTION fn_sync_user_to_firebase()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_payload  JSON;
+    v_op       TEXT;
+BEGIN
+    -- Determine the operation type so the listener can act accordingly
+    v_op := TG_OP;  -- 'INSERT' or 'UPDATE'
+
+    -- Build the JSON payload from the NEW row.
+    -- password_hash is deliberately excluded — never send hashes over notify.
+    v_payload := json_build_object(
+        'operation',  v_op,
+        'user_id',    NEW.user_id,
+        'full_name',  NEW.full_name,
+        'email',      NEW.email,
+        'role',       NEW.role,
+        'is_active',  NEW.is_active,
+        'created_at', NEW.created_at
+    );
+
+    -- Send notification on the 'user_changes' channel.
+    -- Any backend process running LISTEN user_changes will receive this.
+    PERFORM pg_notify('user_changes', v_payload::TEXT);
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS sync_user_to_firebase ON users;
+CREATE TRIGGER sync_user_to_firebase
+    AFTER INSERT OR UPDATE ON users
+    FOR EACH ROW EXECUTE FUNCTION fn_sync_user_to_firebase();
+
