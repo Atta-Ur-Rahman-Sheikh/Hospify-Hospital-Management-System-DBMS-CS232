@@ -1,5 +1,5 @@
 import os
-import io
+import io  
 import psycopg2
 from PIL import Image
 from dotenv import load_dotenv
