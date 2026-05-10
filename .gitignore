@@ -4,6 +4,7 @@ test_connection_firebase.py
 test_connection_gemini_db.py
 .venv
 backend/serviceAccountKey.json
+backend/serviceAccountKey2.json
 __pycache__/
 *.pyc
 node_modules/

@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { collection, onSnapshot } from 'firebase/firestore';
 import api from '../api/axios';
+import { db } from '../firebase';
 
 export default function Beds() {
   const [wards, setWards] = useState([]);
@@ -8,6 +10,26 @@ export default function Beds() {
 
   useEffect(() => {
     fetchWards();
+
+    const unsubscribe = onSnapshot(collection(db, 'beds'), (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'modified' || change.type === 'added') {
+          const bedData = change.doc.data();
+          setWards(prevWards => prevWards.map(ward => ({
+            ...ward,
+            beds: ward.beds.map(bed => 
+              bed.bed_id === bedData.bed_id 
+                ? { ...bed, status: bedData.status } 
+                : bed
+            )
+          })));
+        }
+      });
+    }, (err) => {
+      console.error("Firebase real-time listener error:", err);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const fetchWards = async () => {

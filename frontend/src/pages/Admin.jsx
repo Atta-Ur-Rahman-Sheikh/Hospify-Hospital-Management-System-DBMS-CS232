@@ -39,14 +39,45 @@ export default function Admin() {
     }
   };
 
+  const handleBackupPush = async () => {
+    try {
+      if(!window.confirm("Push all local data to Firebase?")) return;
+      await api.post('/admin/backup/push');
+      alert("Postgres -> Firebase sync complete!");
+    } catch (err) {
+      alert("Sync failed: " + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleBackupPull = async () => {
+    try {
+      if(!window.confirm("Pull latest data from Firebase to local database?")) return;
+      await api.post('/admin/backup/pull');
+      alert("Firebase -> Postgres sync complete!");
+      fetchData(); // refresh anything needed
+    } catch (err) {
+      alert("Sync failed: " + (err.response?.data?.error || err.message));
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-heading font-bold text-slate-900">System Administration</h1>
-        <button className="btn-primary">
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-          Add New User
-        </button>
+        <div className="flex space-x-3">
+          <button onClick={handleBackupPush} className="btn-secondary flex items-center">
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+            Push to Cloud
+          </button>
+          <button onClick={handleBackupPull} className="btn-secondary flex items-center">
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+            Pull from Cloud
+          </button>
+          <button className="btn-primary flex items-center">
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+            Add New User
+          </button>
+        </div>
       </div>
 
       <div className="flex space-x-1 border-b border-slate-200">

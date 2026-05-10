@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import ErrorBoundary from './components/ErrorBoundary';
 
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -26,29 +27,31 @@ function App() {
   }
 
   return (
-    <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
-      
-      {/* Protected Routes Wrapper */}
-      <Route element={<ProtectedRoute />}>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Dashboard />} />
-          
-          {/* Actual routes */}
-          <Route path="/patients" element={<Patients />} />
-          <Route path="/admissions" element={<Admissions />} />
-          <Route path="/beds" element={<Beds />} />
-          <Route path="/pharmacy" element={<Pharmacy />} />
-          <Route path="/billing" element={<Billing />} />
-          <Route path="/lab" element={<Lab />} />
-          <Route path="/appointments" element={<Appointments />} />
-          
-          <Route element={<ProtectedRoute allowedRoles={['super_admin']} />}>
-            <Route path="/admin" element={<Admin />} />
+    <ErrorBoundary>
+      <Routes>
+        <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+        
+        {/* Protected Routes Wrapper */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Dashboard />} />
+            
+            {/* Actual routes */}
+            <Route path="/patients" element={<Patients />} />
+            <Route path="/admissions" element={<Admissions />} />
+            <Route path="/beds" element={<Beds />} />
+            <Route path="/pharmacy" element={<Pharmacy />} />
+            <Route path="/billing" element={<Billing />} />
+            <Route path="/lab" element={<Lab />} />
+            <Route path="/appointments" element={<Appointments />} />
+            
+            <Route element={<ProtectedRoute allowedRoles={['super_admin']} />}>
+              <Route path="/admin" element={<Admin />} />
+            </Route>
           </Route>
         </Route>
-      </Route>
-    </Routes>
+      </Routes>
+    </ErrorBoundary>
   );
 }
 
