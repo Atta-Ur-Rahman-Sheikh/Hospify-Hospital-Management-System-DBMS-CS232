@@ -11,7 +11,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { useAuth } from '../context/auth-context';
-import { useLabOrders, useUpdateLabOrderStatus } from '../hooks/useLab';
+import { useLabOrders, useUpdateLabOrderStatus, useLabResult } from '../hooks/useLab';
 import PageHeader from '../components/ui/PageHeader';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -20,6 +20,7 @@ import Avatar from '../components/ui/Avatar';
 import Input from '../components/ui/Input';
 import EmptyState from '../components/ui/EmptyState';
 import Skeleton from '../components/ui/Skeleton';
+import Modal from '../components/ui/Modal';
 import { useToast } from '../components/ui/useToast';
 import { cn } from '../lib/cn';
 
@@ -48,6 +49,7 @@ export default function Lab() {
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [resultTarget, setResultTarget] = useState(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -207,16 +209,95 @@ export default function Lab() {
                           Complete
                         </Button>
                       ) : (
-                        <Button size="sm" variant="ghost">View report</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setResultTarget(o)}>View report</Button>
                       )
                     ) : (
-                      <Button size="sm" variant="ghost">View</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setResultTarget(o)}>View</Button>
                     )}
                   </div>
                 </CardBody>
               </Card>
             </motion.div>
           ))}
+        </div>
+      )}
+
+      <ResultModal order={resultTarget} onClose={() => setResultTarget(null)} />
+    </div>
+  );
+}
+
+function ResultModal({ order, onClose }) {
+  return (
+    <Modal
+      open={!!order}
+      onClose={onClose}
+      title={order ? `Result · ${order.test_name}` : 'Result'}
+      description={order ? `Order #${order.order_id} · ${order.patient_name}` : ''}
+      size="lg"
+    >
+      {order && <ResultBody key={order.order_id} order={order} />}
+    </Modal>
+  );
+}
+
+function ResultBody({ order }) {
+  const q = useLabResult(order.order_id);
+
+  if (q.isLoading) {
+    return <div className="space-y-2">
+      <Skeleton className="h-5 w-1/3" />
+      <Skeleton className="h-20 w-full" />
+    </div>;
+  }
+  if (q.isError || !q.data) {
+    return <EmptyState
+      icon={FlaskConical}
+      title="No result yet"
+      description="The lab hasn't uploaded a result for this order. Once a technician completes the test, it will appear here."
+      className="!py-8"
+    />;
+  }
+
+  const r = q.data;
+  return (
+    <div className="space-y-5">
+      <div className="rounded-xl border border-ink-500/30 bg-ink-900/40 p-4 grid grid-cols-2 gap-3">
+        <div>
+          <p className="text-[10px] uppercase tracking-widest text-ink-300 font-semibold">Test</p>
+          <p className="text-sm text-white mt-0.5">{r.test_name}</p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-widest text-ink-300 font-semibold">Resulted</p>
+          <p className="text-sm text-white mt-0.5">
+            {r.resulted_at ? new Date(r.resulted_at).toLocaleString() : '—'}
+          </p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-widest text-ink-300 font-semibold">Patient</p>
+          <p className="text-sm text-white mt-0.5">{r.patient_name}</p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-widest text-ink-300 font-semibold">Technician</p>
+          <p className="text-sm text-white mt-0.5">{r.tech_name || '—'}</p>
+        </div>
+      </div>
+
+      {r.result_summary && (
+        <div>
+          <h3 className="text-sm font-semibold text-white tracking-tight mb-2">Summary</h3>
+          <p className="text-sm text-ink-100 leading-relaxed bg-ink-900/40 border border-ink-500/30 rounded-lg p-3 whitespace-pre-wrap">
+            {r.result_summary}
+          </p>
+        </div>
+      )}
+
+      {r.notes && (
+        <div>
+          <h3 className="text-sm font-semibold text-white tracking-tight mb-2">Technician notes</h3>
+          <p className="text-sm text-ink-200 italic border-l-2 border-ink-500/40 pl-3 whitespace-pre-wrap">
+            {r.notes}
+          </p>
         </div>
       )}
     </div>

@@ -8,6 +8,12 @@ import {
   LogOut as DischargeIcon,
   Plus,
   RefreshCw,
+  HeartPulse,
+  Pill,
+  Thermometer,
+  Activity as ActivityIcon,
+  Wind,
+  FileText,
 } from 'lucide-react';
 import { useAuth } from '../context/auth-context';
 import {
@@ -18,7 +24,10 @@ import {
 import { usePatients } from '../hooks/usePatients';
 import { useDoctors } from '../hooks/useDoctors';
 import { useAvailableBeds } from '../hooks/useWards';
+import { useVitalsForAdmission, useVitalAverages } from '../hooks/useNurses';
+import { usePrescriptionsForAdmission } from '../hooks/usePharmacy';
 import { useToast } from '../components/ui/useToast';
+import { useConfirm } from '../components/ui/confirm-context';
 import PageHeader from '../components/ui/PageHeader';
 import { Card, CardBody, CardFooter, CardHeader } from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -58,10 +67,20 @@ export default function Admissions() {
 
   const discharge = useDischargePatient();
   const toast = useToast();
+  const confirm = useConfirm();
   const [openAdmit, setOpenAdmit] = useState(false);
+  const [vitalsTarget, setVitalsTarget] = useState(null);
+  const [rxTarget, setRxTarget] = useState(null);
 
   const handleDischarge = async (id, name) => {
-    if (!window.confirm(`Discharge ${name}? This will generate the final bill and free the bed.`)) return;
+    const ok = await confirm({
+      title: `Discharge ${name}?`,
+      description: 'This will generate the final bill, free the bed and end the admission. This action cannot be reversed.',
+      confirmLabel: 'Discharge patient',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
     try {
       await discharge.mutateAsync(id);
       toast.success('Patient discharged', name);
@@ -73,8 +92,15 @@ export default function Admissions() {
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow="Inpatient"
+        icon={ClipboardPlus}
         title="Active Admissions"
         description="Inpatients currently under care."
+        meta={
+          <Badge tone="brand" size="sm">
+            {admissions.length} admitted
+          </Badge>
+        }
         actions={
           <>
             <Button
@@ -126,7 +152,7 @@ export default function Admissions() {
                     <Avatar name={adm.patient_name} size="md" />
                     <div className="min-w-0">
                       <p className="font-semibold text-white truncate">{adm.patient_name}</p>
-                      <p className="text-xs text-ink-200">
+                      <p className="text-xs text-ink-300">
                         Admitted {new Date(adm.admitted_at).toLocaleString()}
                       </p>
                     </div>
@@ -144,7 +170,7 @@ export default function Admissions() {
                   <Stat
                     icon={BedDouble}
                     label="Bed"
-                    value={adm.bed_number ? `Ward ${adm.ward_id} · ${adm.bed_number}` : '—'}
+                    value={adm.bed_number ? `${adm.bed_number}` : '—'}
                   />
                   <Stat
                     icon={Clock}
@@ -153,9 +179,13 @@ export default function Admissions() {
                   />
                 </CardBody>
                 <CardFooter className="justify-between">
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="ghost">Vitals</Button>
-                    <Button size="sm" variant="ghost">Prescriptions</Button>
+                  <div className="flex items-center gap-1.5">
+                    <Button size="sm" variant="ghost" leftIcon={<HeartPulse className="h-3.5 w-3.5" />} onClick={() => setVitalsTarget(adm)}>
+                      Vitals
+                    </Button>
+                    <Button size="sm" variant="ghost" leftIcon={<Pill className="h-3.5 w-3.5" />} onClick={() => setRxTarget(adm)}>
+                      Prescriptions
+                    </Button>
                   </div>
                   {canDischarge && (
                     <Button
@@ -176,6 +206,8 @@ export default function Admissions() {
       )}
 
       <AdmitModal open={openAdmit} onClose={() => setOpenAdmit(false)} />
+      <VitalsModal admission={vitalsTarget} onClose={() => setVitalsTarget(null)} />
+      <PrescriptionsModal admission={rxTarget} onClose={() => setRxTarget(null)} />
     </div>
   );
 }
@@ -191,6 +223,179 @@ function Stat({ icon: Icon, label, value }) {
     </div>
   );
 }
+
+// ── Vitals modal ──
+
+function VitalsModal({ admission, onClose }) {
+  return (
+    <Modal
+      open={!!admission}
+      onClose={onClose}
+      title="Vitals timeline"
+      description={admission ? `${admission.patient_name} · Admission #${admission.admission_id}` : ''}
+      size="lg"
+    >
+      {admission && <VitalsBody key={admission.admission_id} admissionId={admission.admission_id} />}
+    </Modal>
+  );
+}
+
+function VitalsBody({ admissionId }) {
+  const list = useVitalsForAdmission(admissionId);
+  const avgs = useVitalAverages(admissionId);
+  const items = list.data || [];
+
+  return (
+    <div className="space-y-5">
+      {avgs.data && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <Avg icon={Thermometer} label="Temp avg" value={avgs.data.temperature?.toFixed(1)} unit="°C" />
+          <Avg icon={ActivityIcon} label="Pulse avg" value={Math.round(avgs.data.pulse || 0)} unit="bpm" />
+          <Avg icon={HeartPulse} label="BP avg" value={`${Math.round(avgs.data.blood_pressure_sys || 0)}/${Math.round(avgs.data.blood_pressure_dia || 0)}`} unit="mmHg" />
+          <Avg icon={Wind} label="O₂ avg" value={Math.round(avgs.data.oxygen_saturation || 0)} unit="%" />
+        </div>
+      )}
+
+      <div>
+        <h3 className="text-sm font-semibold text-white tracking-tight mb-2">Most recent first</h3>
+        {list.isLoading ? (
+          <div className="space-y-2">
+            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+          </div>
+        ) : items.length === 0 ? (
+          <EmptyState icon={HeartPulse} title="No vitals recorded yet" description="Nurses can log vitals from their workstation." className="!py-8" />
+        ) : (
+          <ul className="space-y-2">
+            {items.slice(0, 12).map((v) => (
+              <li key={v.vital_id} className="rounded-lg border border-ink-500/30 bg-ink-900/40 px-3 py-2.5">
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <p className="text-ink-300 text-xs tabular-nums shrink-0">
+                    {new Date(v.recorded_at).toLocaleString()}
+                  </p>
+                  {v.nurse_name && <Badge tone="neutral" size="sm">{v.nurse_name}</Badge>}
+                </div>
+                <div className="mt-2 grid grid-cols-2 sm:grid-cols-5 gap-2 text-sm text-white">
+                  <Pair label="Temp" value={v.temperature != null ? `${v.temperature}°` : '—'} />
+                  <Pair label="Pulse" value={v.pulse != null ? `${v.pulse} bpm` : '—'} />
+                  <Pair label="BP" value={v.blood_pressure_sys != null ? `${v.blood_pressure_sys}/${v.blood_pressure_dia}` : '—'} />
+                  <Pair label="SpO₂" value={v.oxygen_saturation != null ? `${v.oxygen_saturation}%` : '—'} />
+                  <Pair label="Weight" value={v.weight != null ? `${v.weight} kg` : '—'} />
+                </div>
+                {v.notes && (
+                  <p className="mt-2 text-xs text-ink-200 italic border-l-2 border-ink-500/40 pl-2">
+                    {v.notes}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Pair({ label, value }) {
+  return (
+    <div>
+      <p className="text-[10px] uppercase tracking-widest text-ink-300 font-semibold">{label}</p>
+      <p className="text-sm font-medium text-white tabular-nums">{value}</p>
+    </div>
+  );
+}
+
+function Avg({ icon: Icon, label, value, unit }) {
+  return (
+    <div className="rounded-xl border border-ink-500/30 bg-ink-900/60 p-3">
+      <p className="text-[10px] uppercase tracking-widest text-ink-300 font-semibold flex items-center gap-1.5">
+        <Icon className="h-3 w-3" />
+        {label}
+      </p>
+      <p className="mt-1.5 text-lg font-bold text-white tabular-nums">
+        {value || 0} <span className="text-[10px] font-medium text-ink-300">{unit}</span>
+      </p>
+    </div>
+  );
+}
+
+// ── Prescriptions modal ──
+
+function PrescriptionsModal({ admission, onClose }) {
+  return (
+    <Modal
+      open={!!admission}
+      onClose={onClose}
+      title="Prescriptions"
+      description={admission ? `${admission.patient_name} · Admission #${admission.admission_id}` : ''}
+      size="lg"
+    >
+      {admission && <PrescriptionsBody key={admission.admission_id} admissionId={admission.admission_id} />}
+    </Modal>
+  );
+}
+
+function PrescriptionsBody({ admissionId }) {
+  const q = usePrescriptionsForAdmission(admissionId);
+
+  if (q.isLoading) {
+    return <div className="space-y-2">
+      {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+    </div>;
+  }
+  const list = q.data || [];
+  if (!list.length) {
+    return <EmptyState icon={Pill} title="No prescriptions yet" description="The attending doctor hasn't prescribed anything for this admission." className="!py-8" />;
+  }
+
+  return (
+    <ul className="space-y-3">
+      {list.map((p) => (
+        <li key={p.prescription_id} className="rounded-xl border border-ink-500/30 bg-ink-900/40 p-4">
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-ink-300 font-semibold">
+                Rx #{p.prescription_id}
+              </p>
+              <p className="text-sm text-white mt-0.5">
+                Prescribed by <span className="font-semibold">{p.doctor_name}</span>
+              </p>
+              <p className="text-xs text-ink-300">
+                {new Date(p.prescribed_at).toLocaleString()}
+              </p>
+            </div>
+            {p.notes && (
+              <Badge tone="neutral" size="sm" className="max-w-[220px] truncate" title={p.notes}>
+                <FileText className="h-3 w-3" />
+                Notes
+              </Badge>
+            )}
+          </div>
+          <ul className="space-y-1.5">
+            {(p.items || []).map((it) => (
+              <li
+                key={it.item_id}
+                className="flex items-center gap-3 rounded-md bg-ink-800/60 border border-ink-500/30 px-3 py-2"
+              >
+                <Pill className="h-4 w-4 text-brand-300 shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-white truncate">
+                    {it.brand_name} <span className="text-ink-300 font-normal">({it.generic_name})</span>
+                  </p>
+                  <p className="text-xs text-ink-300 truncate">
+                    {it.dosage} · {it.frequency} · {it.duration_days} days
+                    {it.instructions && ` · ${it.instructions}`}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// ── Admit modal ──
 
 function AdmitModal({ open, onClose }) {
   return (
@@ -240,69 +445,69 @@ function AdmitForm({ onClose }) {
 
   return (
     <form onSubmit={submit} className="space-y-4">
-        <Select
-          label="Patient"
-          value={form.patient_id}
-          onChange={setField('patient_id')}
-          error={errors.patient_id}
-          required
-        >
-          <option value="">Select patient</option>
-          {patients.map((p) => (
-            <option key={p.patient_id} value={p.patient_id}>
-              {p.full_name} {p.cnic && `· ${p.cnic}`}
-            </option>
-          ))}
-        </Select>
-        <Select
-          label="Attending doctor"
-          value={form.doctor_id}
-          onChange={setField('doctor_id')}
-          error={errors.doctor_id}
-          required
-        >
-          <option value="">Select doctor</option>
-          {doctors.map((d) => (
-            <option key={d.doctor_id} value={d.doctor_id}>
-              {d.full_name} {d.specialization && `· ${d.specialization}`}
-            </option>
-          ))}
-        </Select>
-        <Select
-          label="Available bed"
-          value={form.bed_id}
-          onChange={setField('bed_id')}
-          error={errors.bed_id}
-          required
-        >
-          <option value="">Select bed</option>
-          {beds.map((b) => (
-            <option key={b.bed_id} value={b.bed_id}>
-              {b.ward_name} · Bed {b.bed_number} ({b.bed_type})
-            </option>
-          ))}
-        </Select>
-        <Select
-          label="Admission type"
-          value={form.admission_type}
-          onChange={setField('admission_type')}
-        >
-          <option value="general">General</option>
-          <option value="emergency">Emergency</option>
-          <option value="icu">ICU</option>
-          <option value="surgery">Surgery</option>
-        </Select>
+      <Select
+        label="Patient"
+        value={form.patient_id}
+        onChange={setField('patient_id')}
+        error={errors.patient_id}
+        required
+      >
+        <option value="">Select patient</option>
+        {patients.map((p) => (
+          <option key={p.patient_id} value={p.patient_id}>
+            {p.full_name} {p.cnic && `· ${p.cnic}`}
+          </option>
+        ))}
+      </Select>
+      <Select
+        label="Attending doctor"
+        value={form.doctor_id}
+        onChange={setField('doctor_id')}
+        error={errors.doctor_id}
+        required
+      >
+        <option value="">Select doctor</option>
+        {doctors.map((d) => (
+          <option key={d.doctor_id} value={d.doctor_id}>
+            {d.full_name} {d.specialization && `· ${d.specialization}`}
+          </option>
+        ))}
+      </Select>
+      <Select
+        label="Available bed"
+        value={form.bed_id}
+        onChange={setField('bed_id')}
+        error={errors.bed_id}
+        required
+      >
+        <option value="">Select bed</option>
+        {beds.map((b) => (
+          <option key={b.bed_id} value={b.bed_id}>
+            {b.ward_name} · Bed {b.bed_number} ({b.bed_type})
+          </option>
+        ))}
+      </Select>
+      <Select
+        label="Admission type"
+        value={form.admission_type}
+        onChange={setField('admission_type')}
+      >
+        <option value="general">General</option>
+        <option value="emergency">Emergency</option>
+        <option value="icu">ICU</option>
+        <option value="surgery">Surgery</option>
+      </Select>
 
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-ink-500/40">
-          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button
-            type="submit"
-            isLoading={admit.isPending}
-            leftIcon={!admit.isPending ? <Plus className="h-4 w-4" /> : undefined}
-          >
-            Admit
-          </Button>
-        </div>
-      </form>
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-ink-500/30">
+        <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button
+          type="submit"
+          isLoading={admit.isPending}
+          leftIcon={!admit.isPending ? <Plus className="h-4 w-4" /> : undefined}
+        >
+          Admit
+        </Button>
+      </div>
+    </form>
   );
 }

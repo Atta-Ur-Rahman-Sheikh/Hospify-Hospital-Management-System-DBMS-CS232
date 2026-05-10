@@ -18,6 +18,7 @@ import {
   useBackupPull,
 } from '../hooks/useAdmin';
 import { useToast } from '../components/ui/useToast';
+import { useConfirm } from '../components/ui/confirm-context';
 import PageHeader from '../components/ui/PageHeader';
 import { Card } from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -46,6 +47,7 @@ export default function Admin() {
   const push = useBackupPush();
   const pull = useBackupPull();
   const toast = useToast();
+  const confirm = useConfirm();
 
   const refetchActive = tab === 'users' ? usersQ.refetch : auditQ.refetch;
   const isRefetching = tab === 'users' ? usersQ.isRefetching : auditQ.isRefetching;
@@ -60,7 +62,13 @@ export default function Admin() {
   };
 
   const handlePush = async () => {
-    if (!window.confirm('Push all local data to Firebase?')) return;
+    const ok = await confirm({
+      title: 'Push to cloud?',
+      description: 'This will overwrite remote Firebase data with the current Postgres state.',
+      confirmLabel: 'Push to Firebase',
+      tone: 'warning',
+    });
+    if (!ok) return;
     try {
       await push.mutateAsync();
       toast.success('Sync complete', 'Postgres → Firebase');
@@ -70,7 +78,13 @@ export default function Admin() {
   };
 
   const handlePull = async () => {
-    if (!window.confirm('Pull latest data from Firebase to local database?')) return;
+    const ok = await confirm({
+      title: 'Pull from cloud?',
+      description: 'This will replace local Postgres data with the latest Firebase snapshot.',
+      confirmLabel: 'Pull from Firebase',
+      tone: 'warning',
+    });
+    if (!ok) return;
     try {
       await pull.mutateAsync();
       toast.success('Sync complete', 'Firebase → Postgres');

@@ -130,13 +130,47 @@
 }
 .fade-in-up { animation: fadeInUp 0.4s ease-out both; }
 
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(0.92); }
+}
+.pulse-dot { animation: pulseDot 1.8s ease-in-out infinite; }
+
+@keyframes ekgPulse {
+  0%   { stroke-dashoffset: 240; opacity: 0.3; }
+  35%  { opacity: 1; }
+  70%  { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: -240; opacity: 0; }
+}
+.ekg-line {
+  stroke-dasharray: 240;
+  animation: ekgPulse 3.2s ease-in-out infinite;
+}
+
+/* Subtle conic-gradient accent reused in hero / login */
+.conic-accent {
+  background:
+    radial-gradient(circle at 25% 0%, rgba(37, 99, 235, 0.18), transparent 45%),
+    radial-gradient(circle at 95% 60%, rgba(13, 148, 136, 0.14), transparent 45%);
+}
+
+/* Hairline divider used inside cards */
+.hairline {
+  background-image: linear-gradient(to right, transparent, rgba(148, 163, 184, 0.18), transparent);
+  height: 1px;
+}
+
 /* Recharts dark tooltip */
 .recharts-default-tooltip {
   background: var(--color-ink-700) !important;
   border: 1px solid var(--color-ink-500) !important;
-  border-radius: 8px !important;
+  border-radius: 10px !important;
   color: var(--color-ink-50) !important;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.45) !important;
 }
 .recharts-tooltip-label {
   color: var(--color-ink-100) !important;
+}
+.recharts-tooltip-cursor {
+  fill: rgba(37, 99, 235, 0.06) !important;
 }

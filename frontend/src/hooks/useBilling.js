@@ -13,6 +13,28 @@ export function useBills() {
   });
 }
 
+export function useBillByAdmission(admissionId, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: ['bills', 'admission', admissionId],
+    queryFn: async () => {
+      const res = await api.get(`/billing/${admissionId}`);
+      return res.data;
+    },
+    enabled: enabled && Boolean(admissionId),
+  });
+}
+
+export function useBillingSummary(billId, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: ['bills', 'summary', billId],
+    queryFn: async () => {
+      const res = await api.get(`/billing/summary/${billId}`);
+      return res.data;
+    },
+    enabled: enabled && Boolean(billId),
+  });
+}
+
 export function useGenerateBill() {
   const qc = useQueryClient();
   return useMutation({

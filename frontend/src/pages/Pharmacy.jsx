@@ -6,9 +6,11 @@ import {
   CheckCircle2,
   RefreshCw,
   Package,
-  Plus,
+  TrendingUp,
 } from 'lucide-react';
-import { useMedicines } from '../hooks/usePharmacy';
+import { useMedicines, useUpdateMedicineStock } from '../hooks/usePharmacy';
+import { useAuth } from '../context/auth-context';
+import { useToast } from '../components/ui/useToast';
 import PageHeader from '../components/ui/PageHeader';
 import { Card } from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -18,13 +20,19 @@ import EmptyState from '../components/ui/EmptyState';
 import { Table, THead, TBody, TR, TH, TD } from '../components/ui/Table';
 import { SkeletonTable } from '../components/ui/Skeleton';
 import StatCard from '../components/ui/StatCard';
+import Modal from '../components/ui/Modal';
 import { cn } from '../lib/cn';
 
+const CAN_UPDATE = ['super_admin', 'pharmacist'];
+
 export default function Pharmacy() {
-  const { data: inventory = [], isLoading, isError, refetch, isRefetching } =
-    useMedicines();
+  const { user } = useAuth();
+  const canUpdate = CAN_UPDATE.includes(user?.role);
+
+  const { data: inventory = [], isLoading, isError, refetch, isRefetching } = useMedicines();
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('all'); // all | low | in
+  const [filter, setFilter] = useState('all');
+  const [restockTarget, setRestockTarget] = useState(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -51,21 +59,28 @@ export default function Pharmacy() {
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow="Inventory"
+        icon={Pill}
         title="Pharmacy"
         description="Track medicine stock and re-order alerts."
-        actions={
+        meta={
           <>
-            <Button
-              variant="secondary"
-              leftIcon={<RefreshCw className={isRefetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />}
-              onClick={() => refetch()}
-            >
-              Refresh
-            </Button>
-            <Button leftIcon={<Plus className="h-4 w-4" />} variant="secondary" disabled>
-              Restock
-            </Button>
+            <Badge tone="brand" size="sm">{stats.total} items</Badge>
+            {stats.low > 0 && (
+              <Badge tone="warning" size="sm" dot>
+                {stats.low} need restocking
+              </Badge>
+            )}
           </>
+        }
+        actions={
+          <Button
+            variant="secondary"
+            leftIcon={<RefreshCw className={isRefetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />}
+            onClick={() => refetch()}
+          >
+            Refresh
+          </Button>
         }
       />
 
@@ -80,7 +95,7 @@ export default function Pharmacy() {
         <StatCard
           label="Total units in stock"
           value={stats.sumStock.toLocaleString()}
-          icon={Pill}
+          icon={TrendingUp}
           tone="vital"
           loading={isLoading}
         />
@@ -103,7 +118,7 @@ export default function Pharmacy() {
             leftIcon={<Search className="h-4 w-4" />}
             containerClassName="flex-1"
           />
-          <div className="inline-flex rounded-lg border border-ink-500/50 bg-ink-800 p-1 self-start">
+          <div className="inline-flex rounded-lg border border-ink-500/40 bg-ink-800 p-1 self-start">
             {[
               { id: 'all', label: 'All' },
               { id: 'in',  label: 'In stock' },
@@ -155,7 +170,7 @@ export default function Pharmacy() {
                       </div>
                       <div>
                         <p className="font-medium text-white">{m.brand_name}</p>
-                        <p className="text-xs text-ink-200">
+                        <p className="text-xs text-ink-300">
                           {m.generic_name} {m.unit && `· ${m.unit}`}
                         </p>
                       </div>
@@ -166,7 +181,7 @@ export default function Pharmacy() {
                   </TD>
                   <TD align="center">
                     <p className="font-bold text-white tabular-nums">{m.quantity_available}</p>
-                    <p className="text-[11px] text-ink-200">Reorder ≤ {m.reorder_level}</p>
+                    <p className="text-[11px] text-ink-300">Reorder ≤ {m.reorder_level}</p>
                   </TD>
                   <TD align="center">
                     {isLow ? (
@@ -182,7 +197,17 @@ export default function Pharmacy() {
                     )}
                   </TD>
                   <TD align="right">
-                    <Button size="sm" variant="ghost">Update</Button>
+                    {canUpdate ? (
+                      <Button
+                        size="sm"
+                        variant={isLow ? 'primary' : 'ghost'}
+                        onClick={() => setRestockTarget(m)}
+                      >
+                        Update stock
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-ink-400">Read-only</span>
+                    )}
                   </TD>
                 </TR>
               );
@@ -190,6 +215,94 @@ export default function Pharmacy() {
           </TBody>
         </Table>
       )}
+
+      <RestockModal
+        medicine={restockTarget}
+        onClose={() => setRestockTarget(null)}
+      />
+    </div>
+  );
+}
+
+// ── Restock modal ──
+
+function RestockModal({ medicine, onClose }) {
+  return (
+    <Modal
+      open={!!medicine}
+      onClose={onClose}
+      title="Update stock"
+      description={
+        medicine ? `${medicine.brand_name} (${medicine.generic_name})` : ''
+      }
+    >
+      {medicine && <RestockForm key={medicine.medicine_id} medicine={medicine} onClose={onClose} />}
+    </Modal>
+  );
+}
+
+function RestockForm({ medicine, onClose }) {
+  const [qty, setQty] = useState(() => String(medicine.quantity_available ?? 0));
+  const update = useUpdateMedicineStock();
+  const toast = useToast();
+
+  const submit = async (e) => {
+    e?.preventDefault();
+    const n = Number(qty);
+    if (!Number.isFinite(n) || n < 0) {
+      toast.error('Enter a valid quantity');
+      return;
+    }
+    try {
+      await update.mutateAsync({ id: medicine.medicine_id, quantity_available: n });
+      toast.success('Stock updated', `${medicine.brand_name}: ${n} units`);
+      onClose();
+    } catch (err) {
+      toast.error('Update failed', err.response?.data?.error || 'Try again');
+    }
+  };
+
+  const isLow = Number(qty) <= medicine.reorder_level;
+
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <div className="rounded-xl bg-ink-900 border border-ink-500/30 p-4 grid grid-cols-3 gap-3 text-center">
+        <Stat label="Current" value={medicine.quantity_available} />
+        <Stat label="Reorder ≤" value={medicine.reorder_level} />
+        <Stat label="Category" value={medicine.category || '—'} small />
+      </div>
+      <Input
+        label="New quantity"
+        type="number"
+        min="0"
+        step="1"
+        value={qty}
+        onChange={(e) => setQty(e.target.value)}
+        autoFocus
+        required
+      />
+      {isLow && (
+        <div className="flex items-start gap-2 rounded-lg border border-warn-500/30 bg-warn-500/10 px-3 py-2 text-xs text-warn-500">
+          <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+          This will leave the item below the reorder threshold.
+        </div>
+      )}
+
+      <div className="flex items-center justify-end gap-3 pt-4 border-t border-ink-500/30">
+        <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button type="submit" isLoading={update.isPending}>Save stock</Button>
+      </div>
+    </form>
+  );
+}
+
+function Stat({ label, value, small }) {
+  return (
+    <div>
+      <p className="text-[10px] uppercase tracking-widest text-ink-300 font-semibold">{label}</p>
+      <p className={cn('mt-1 font-semibold text-white tabular-nums truncate', small ? 'text-xs' : 'text-sm')}>
+        {value}
+      </p>
     </div>
   );
 }

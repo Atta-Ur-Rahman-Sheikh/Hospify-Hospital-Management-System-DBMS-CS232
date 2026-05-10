@@ -12,9 +12,9 @@ import {
   ShieldCheck,
   Stethoscope,
   LogOut,
-  Activity,
   ChevronLeft,
   ChevronRight,
+  Plus,
 } from 'lucide-react';
 import { useAuth } from '../context/auth-context';
 import Avatar from '../components/ui/Avatar';
@@ -64,6 +64,33 @@ const ROLE_LABEL = {
   billing_staff: 'Billing Staff',
 };
 
+/** Custom medical-cross-with-EKG mark. More distinctive than a generic Activity icon. */
+function HospifyMark({ className }) {
+  return (
+    <svg viewBox="0 0 32 32" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="hospify-mark" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#3B82F6" />
+          <stop offset="100%" stopColor="#0D9488" />
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="28" height="28" rx="9" fill="url(#hospify-mark)" />
+      {/* white plus */}
+      <path d="M14 8h4v6h6v4h-6v6h-4v-6H8v-4h6V8z" fill="white" fillOpacity="0.95" />
+      {/* faint ekg arc */}
+      <path
+        d="M5 22 L11 22 L13 18 L15 26 L17 20 L20 22 L27 22"
+        stroke="white"
+        strokeOpacity="0.6"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="ekg-line"
+      />
+    </svg>
+  );
+}
+
 export default function Sidebar() {
   const { user, logout } = useAuth();
   const { collapsed, toggle, isMobile } = useSidebar();
@@ -71,24 +98,24 @@ export default function Sidebar() {
 
   return (
     <motion.aside
-      animate={{ width: collapsed ? 72 : 240 }}
+      animate={{ width: collapsed ? 72 : 248 }}
       transition={{ type: 'spring', stiffness: 320, damping: 32 }}
       className={cn(
         'fixed inset-y-0 left-0 z-30 flex flex-col',
-        'bg-ink-950/95 backdrop-blur-xl border-r border-ink-500/40'
+        'bg-ink-950/95 backdrop-blur-xl border-r border-ink-500/30'
       )}
     >
       {/* Brand */}
-      <div className={cn(
-        'flex items-center gap-2.5 px-4 h-16 border-b border-ink-500/30 shrink-0',
-        collapsed && 'justify-center px-0'
-      )}>
-        <Link to="/" className="flex items-center gap-2.5 min-w-0">
+      <div
+        className={cn(
+          'flex items-center gap-3 px-4 h-16 border-b border-ink-500/30 shrink-0',
+          collapsed && 'justify-center px-0'
+        )}
+      >
+        <Link to="/" className="flex items-center gap-3 min-w-0">
           <div className="relative shrink-0">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lg shadow-brand-600/30">
-              <Activity className="h-5 w-5 text-white" strokeWidth={2.5} />
-            </div>
-            <div className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-vital-500 ring-2 ring-ink-950" />
+            <HospifyMark className="h-9 w-9 drop-shadow-[0_4px_12px_rgba(37,99,235,0.35)]" />
+            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-vital-500 ring-2 ring-ink-950 pulse-dot" />
           </div>
           <AnimatePresence initial={false}>
             {showLabels && (
@@ -102,8 +129,8 @@ export default function Sidebar() {
                 <p className="text-[15px] font-bold text-white leading-none tracking-tight">
                   Hospify
                 </p>
-                <p className="text-[10px] text-ink-200 mt-1 uppercase tracking-widest font-medium">
-                  HMS Suite
+                <p className="text-[10px] text-ink-300 mt-1.5 uppercase tracking-[0.18em] font-medium">
+                  Care OS
                 </p>
               </motion.div>
             )}
@@ -112,7 +139,7 @@ export default function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+      <nav className="flex-1 overflow-y-auto px-3 py-5 space-y-6">
         {NAV.map((group) => {
           const items = group.items.filter((it) => it.roles.includes(user?.role));
           if (!items.length) return null;
@@ -124,13 +151,13 @@ export default function Sidebar() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="px-3 text-[10px] font-semibold uppercase tracking-widest text-ink-300 mb-2"
+                    className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-300/80"
                   >
                     {group.section}
                   </motion.div>
                 )}
               </AnimatePresence>
-              <ul className="space-y-1">
+              <ul className="space-y-0.5">
                 {items.map((item) => (
                   <li key={item.path}>
                     <NavLink
@@ -138,29 +165,49 @@ export default function Sidebar() {
                       end={item.path === '/'}
                       className={({ isActive }) =>
                         cn(
-                          'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium',
+                          'group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium',
                           'transition-colors duration-150',
                           isActive
-                            ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
-                            : 'text-ink-100 hover:bg-ink-800 hover:text-white',
+                            ? 'text-white bg-brand-500/10'
+                            : 'text-ink-100 hover:bg-ink-800/80 hover:text-white',
                           collapsed && 'justify-center px-0'
                         )
                       }
                       title={collapsed ? item.name : undefined}
                     >
-                      <item.icon className="h-[18px] w-[18px] shrink-0" />
-                      <AnimatePresence initial={false}>
-                        {showLabels && (
-                          <motion.span
-                            initial={{ opacity: 0, x: -4 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -4 }}
-                            className="truncate"
-                          >
-                            {item.name}
-                          </motion.span>
-                        )}
-                      </AnimatePresence>
+                      {({ isActive }) => (
+                        <>
+                          {/* slim left accent — replaces full electric pill */}
+                          <span
+                            className={cn(
+                              'absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full transition-all',
+                              isActive
+                                ? 'bg-brand-500 opacity-100'
+                                : 'bg-brand-500 opacity-0 group-hover:opacity-30',
+                              collapsed && 'left-0'
+                            )}
+                          />
+                          <item.icon
+                            className={cn(
+                              'h-[17px] w-[17px] shrink-0 transition-colors',
+                              isActive ? 'text-brand-400' : 'text-ink-200 group-hover:text-ink-50'
+                            )}
+                            strokeWidth={isActive ? 2.2 : 1.8}
+                          />
+                          <AnimatePresence initial={false}>
+                            {showLabels && (
+                              <motion.span
+                                initial={{ opacity: 0, x: -4 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -4 }}
+                                className="truncate"
+                              >
+                                {item.name}
+                              </motion.span>
+                            )}
+                          </AnimatePresence>
+                        </>
+                      )}
                     </NavLink>
                   </li>
                 ))}
@@ -170,11 +217,35 @@ export default function Sidebar() {
         })}
       </nav>
 
+      {/* New patient quick-action */}
+      {!collapsed && ['super_admin', 'receptionist'].includes(user?.role) && (
+        <div className="px-3 mb-2">
+          <Link
+            to="/patients"
+            state={{ openCreate: true }}
+            className={cn(
+              'group flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] font-semibold',
+              'bg-gradient-to-r from-brand-600 to-brand-700 text-white',
+              'shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_8px_24px_-12px_rgba(37,99,235,0.6)]',
+              'hover:from-brand-500 hover:to-brand-600 transition-all'
+            )}
+          >
+            <span className="h-6 w-6 rounded-md bg-white/15 ring-1 ring-white/20 flex items-center justify-center group-hover:bg-white/25 transition-colors">
+              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
+            </span>
+            New patient
+            <kbd className="ml-auto text-[10px] font-mono bg-white/10 ring-1 ring-white/15 rounded px-1.5 py-0.5">
+              N
+            </kbd>
+          </Link>
+        </div>
+      )}
+
       {/* Collapse toggle (desktop only) */}
       {!isMobile && (
         <button
           onClick={toggle}
-          className="mx-3 mb-2 h-8 rounded-lg border border-ink-500/40 bg-ink-800 text-ink-100 hover:bg-ink-700 hover:text-white transition-colors flex items-center justify-center"
+          className="mx-3 mb-2 h-8 rounded-md border border-ink-500/30 bg-ink-800/60 text-ink-200 hover:bg-ink-700 hover:text-white transition-colors flex items-center justify-center"
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
@@ -196,7 +267,7 @@ export default function Sidebar() {
                 <p className="text-sm font-semibold text-white truncate">
                   {user?.full_name || 'User'}
                 </p>
-                <p className="text-[11px] text-ink-200 truncate">
+                <p className="text-[11px] text-ink-300 truncate">
                   {ROLE_LABEL[user?.role] || user?.role}
                 </p>
               </motion.div>
@@ -206,7 +277,7 @@ export default function Sidebar() {
             onClick={logout}
             title="Sign out"
             className={cn(
-              'p-2 rounded-md text-ink-200 hover:bg-ink-700 hover:text-danger-500 transition-colors',
+              'p-2 rounded-md text-ink-300 hover:bg-ink-700 hover:text-danger-500 transition-colors',
               collapsed && 'mt-1'
             )}
           >

@@ -6,6 +6,7 @@ import './index.css';
 import App from './App.jsx';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './components/ui/Toast';
+import { ConfirmProvider } from './components/ui/Confirm';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,9 +23,11 @@ createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
+          <ConfirmProvider>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </ConfirmProvider>
         </ToastProvider>
       </QueryClientProvider>
     </BrowserRouter>

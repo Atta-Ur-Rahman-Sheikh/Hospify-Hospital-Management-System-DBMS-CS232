@@ -43,3 +43,14 @@ export function useUpdateMedicineStock() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['pharmacy'] }),
   });
 }
+
+export function usePrescriptionsForAdmission(admissionId, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: ['pharmacy', 'prescriptions', admissionId],
+    queryFn: async () => {
+      const res = await api.get(`/pharmacy/prescriptions/${admissionId}`);
+      return res.data;
+    },
+    enabled: enabled && Boolean(admissionId),
+  });
+}

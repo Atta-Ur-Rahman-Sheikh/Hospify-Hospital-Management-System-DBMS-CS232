@@ -23,3 +23,15 @@ export function useUpdateLabOrderStatus() {
     onSuccess: () => qc.invalidateQueries({ queryKey: LAB_ORDERS_QUERY_KEY }),
   });
 }
+
+export function useLabResult(orderId, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: ['lab', 'result', orderId],
+    queryFn: async () => {
+      const res = await api.get(`/lab/orders/${orderId}/result`);
+      return res.data;
+    },
+    enabled: enabled && Boolean(orderId),
+    retry: false, // 404 means "no result yet"
+  });
+}
