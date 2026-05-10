@@ -98,11 +98,12 @@ export default function Sidebar() {
 
   return (
     <motion.aside
-      animate={{ width: collapsed ? 72 : 248 }}
+      animate={{ width: isMobile ? (collapsed ? 0 : 248) : (collapsed ? 72 : 248) }}
       transition={{ type: 'spring', stiffness: 320, damping: 32 }}
       className={cn(
-        'fixed inset-y-0 left-0 z-30 flex flex-col',
-        'bg-ink-950/95 backdrop-blur-xl border-r border-ink-500/30'
+        'fixed inset-y-0 left-0 z-30 flex flex-col overflow-hidden',
+        'bg-ink-950/95 backdrop-blur-xl border-r border-ink-500/30',
+        isMobile && collapsed && 'border-r-0'
       )}
     >
       {/* Brand */}
@@ -217,29 +218,7 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* New patient quick-action */}
-      {!collapsed && ['super_admin', 'receptionist'].includes(user?.role) && (
-        <div className="px-3 mb-2">
-          <Link
-            to="/patients"
-            state={{ openCreate: true }}
-            className={cn(
-              'group flex items-center gap-2 rounded-lg px-3 py-2.5 text-[13px] font-semibold',
-              'bg-gradient-to-r from-brand-600 to-brand-700 text-white',
-              'shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_8px_24px_-12px_rgba(37,99,235,0.6)]',
-              'hover:from-brand-500 hover:to-brand-600 transition-all'
-            )}
-          >
-            <span className="h-6 w-6 rounded-md bg-white/15 ring-1 ring-white/20 flex items-center justify-center group-hover:bg-white/25 transition-colors">
-              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} />
-            </span>
-            New patient
-            <kbd className="ml-auto text-[10px] font-mono bg-white/10 ring-1 ring-white/15 rounded px-1.5 py-0.5">
-              N
-            </kbd>
-          </Link>
-        </div>
-      )}
+
 
       {/* Collapse toggle (desktop only) */}
       {!isMobile && (

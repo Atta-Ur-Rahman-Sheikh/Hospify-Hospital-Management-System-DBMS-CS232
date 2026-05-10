@@ -14,8 +14,10 @@ import {
   Check,
   CornerDownLeft,
   X as CloseIcon,
+  Menu,
 } from 'lucide-react';
 import { useAuth } from '../context/auth-context';
+import { useSidebar } from './sidebar-context';
 import Avatar from '../components/ui/Avatar';
 import Badge from '../components/ui/Badge';
 import { useAlerts, useResolveAlert } from '../hooks/useAdmin';
@@ -44,6 +46,7 @@ export default function TopBar() {
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
+  const { toggle, isMobile } = useSidebar();
 
   const inputRef = useRef(null);
   const containerRef = useRef(null);
@@ -150,11 +153,21 @@ export default function TopBar() {
   return (
     <header
       className={cn(
-        'sticky top-0 z-40 h-16 flex items-center gap-4',
+        'sticky top-0 z-40 h-16 flex items-center gap-2 sm:gap-4',
         'bg-ink-900/75 backdrop-blur-xl border-b border-ink-500/30',
-        'px-4 sm:px-6'
+        'px-2 sm:px-6'
       )}
     >
+      {isMobile && (
+        <button
+          onClick={toggle}
+          className="p-2 -ml-1 mr-1 text-ink-200 hover:text-white rounded-lg hover:bg-ink-800 transition-colors"
+          aria-label="Toggle menu"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      )}
+
       {/* Search */}
       <div ref={containerRef} className="relative flex-1 max-w-xl">
         <Search
