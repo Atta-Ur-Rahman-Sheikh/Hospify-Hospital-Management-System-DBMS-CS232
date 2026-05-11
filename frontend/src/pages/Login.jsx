@@ -56,7 +56,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-ink-900 text-ink-50 flex">
+    <div className="h-screen overflow-hidden bg-ink-900 text-ink-50 flex">
       {/* Left visual panel */}
       <div className="relative hidden lg:flex flex-1 overflow-hidden bg-ink-950">
         <LoginHeroArt />
@@ -123,18 +123,19 @@ export default function Login() {
       </div>
 
       {/* Right form panel */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-10 relative">
+      <div className="flex-1 overflow-y-auto relative">
         <div className="absolute inset-0 -z-10 lg:hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-ink-900 via-ink-950 to-ink-900" />
-          <div className="absolute top-0 right-0 h-[400px] w-[400px] rounded-full bg-brand-500/15 blur-3xl" />
+          <div className="fixed inset-0 bg-gradient-to-br from-ink-900 via-ink-950 to-ink-900" />
+          <div className="fixed top-0 right-0 h-[400px] w-[400px] rounded-full bg-brand-500/15 blur-3xl" />
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
-          className="w-full max-w-sm space-y-7"
-        >
+        <div className="min-h-full w-full flex flex-col items-center justify-center p-6 sm:p-10">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+            className="w-full max-w-sm space-y-7 py-8"
+          >
           <div className="lg:hidden flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lg shadow-brand-600/30">
               <Activity className="h-5 w-5 text-white" strokeWidth={2.5} />
@@ -217,6 +218,7 @@ export default function Login() {
             </ul>
           </div>
         </motion.div>
+        </div>
       </div>
     </div>
   );

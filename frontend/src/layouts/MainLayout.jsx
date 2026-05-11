@@ -35,7 +35,7 @@ function isTypingTarget(el) {
 }
 
 function Shell() {
-  const { collapsed } = useSidebar();
+  const { collapsed, isMobile } = useSidebar();
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -97,7 +97,7 @@ function Shell() {
       <div
         className={cn(
           'min-h-screen transition-[padding] duration-300',
-          collapsed ? 'pl-[72px]' : 'pl-[248px]'
+          isMobile ? 'pl-0' : (collapsed ? 'pl-[72px]' : 'pl-[248px]')
         )}
       >
         <TopBar />

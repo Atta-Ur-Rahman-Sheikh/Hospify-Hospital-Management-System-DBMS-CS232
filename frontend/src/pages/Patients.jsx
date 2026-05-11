@@ -79,10 +79,12 @@ export default function Patients() {
   const [viewId, setViewId] = useState(null);
 
   useEffect(() => {
-    if (location.state?.openCreate) {
+    if (location.state?.openCreate && canCreate) {
+      setOpenCreate(true);
+      // Clean up the state so refreshing doesn't re-open it
       window.history.replaceState({}, '', location.pathname);
     }
-  }, [location]);
+  }, [location.state?.openCreate, location.pathname, canCreate]);
 
   // ── Derive per-patient status & last-visit from real backend data ──
   // Status is "Admitted" if currently in active admissions, "Active" otherwise.
