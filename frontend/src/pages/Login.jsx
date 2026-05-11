@@ -12,6 +12,7 @@ import {
   BedDouble,
   Beaker,
   Pill,
+  HeartPulse,
 } from 'lucide-react';
 import { useAuth } from '../context/auth-context';
 import Button from '../components/ui/Button';
@@ -56,30 +57,32 @@ export default function Login() {
   };
 
   return (
-    <div className="h-screen overflow-hidden bg-ink-900 text-ink-50 flex">
-      {/* Left visual panel */}
-      <div className="relative hidden lg:flex flex-1 overflow-hidden bg-ink-950">
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden bg-ink-900 text-ink-50 flex flex-col lg:flex-row">
+      {/* ── Left visual panel ─────────────────────────────────────── */}
+      <aside className="relative hidden lg:flex lg:flex-1 lg:basis-1/2 overflow-hidden bg-ink-950">
         <LoginHeroArt />
 
-        <div className="relative z-10 flex flex-col justify-between p-12 w-full">
-          <div className="flex items-center gap-3">
+        <div className="relative z-10 flex flex-col justify-between gap-8 p-10 xl:p-12 w-full max-h-screen overflow-hidden">
+          {/* Brand */}
+          <div className="flex items-center gap-3 shrink-0">
             <div className="h-11 w-11 rounded-xl bg-white/10 backdrop-blur-md ring-1 ring-white/20 flex items-center justify-center">
               <Activity className="h-6 w-6 text-white" strokeWidth={2.5} />
             </div>
             <div>
-              <p className="text-lg font-bold text-white">Hospify</p>
+              <p className="text-lg font-bold text-white leading-tight">Hospify</p>
               <p className="text-[11px] text-white/60 uppercase tracking-widest font-medium">
                 Hospital Management
               </p>
             </div>
           </div>
 
-          <div className="space-y-7 max-w-md">
+          {/* Middle content */}
+          <div className="space-y-6 xl:space-y-7 max-w-md min-w-0">
             <motion.h1
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="text-4xl xl:text-5xl font-bold text-white leading-[1.05] tracking-tight"
+              className="text-3xl xl:text-4xl 2xl:text-5xl font-bold text-white leading-[1.1] tracking-tight"
             >
               The operating system for{' '}
               <span className="bg-gradient-to-r from-brand-400 to-vital-300 bg-clip-text text-transparent">
@@ -87,11 +90,12 @@ export default function Login() {
               </span>
               .
             </motion.h1>
+
             <motion.p
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.1 }}
-              className="text-base text-white/70 leading-relaxed"
+              className="text-sm xl:text-base text-white/70 leading-relaxed"
             >
               One secure workspace for patients, appointments, beds, billing,
               pharmacy and lab — built for the people running the hospital.
@@ -101,125 +105,202 @@ export default function Login() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.2 }}
-              className="grid grid-cols-2 gap-2.5 max-w-sm"
+              className="grid grid-cols-2 gap-2.5"
             >
               {FEATURES.map((f) => (
                 <li
                   key={f.label}
-                  className="flex items-center gap-2.5 rounded-lg bg-white/5 ring-1 ring-white/10 px-3 py-2.5 text-sm text-white/85"
+                  className="flex items-center gap-2.5 rounded-lg bg-white/5 ring-1 ring-white/10 px-3 py-2.5 text-[13px] text-white/85"
                 >
                   <f.icon className="h-4 w-4 text-brand-300 shrink-0" strokeWidth={1.8} />
                   <span className="truncate">{f.label}</span>
                 </li>
               ))}
             </motion.ul>
+
+            {/* Inline live stats — only on tall + wide screens, integrated into flow (no overlap) */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              className="hidden 2xl:grid grid-cols-2 gap-3"
+            >
+              <LiveStatCard
+                label="Vitals · live"
+                value="72"
+                unit="bpm"
+                icon={HeartPulse}
+                pings
+                meta={[
+                  { k: 'SpO₂', v: '98%' },
+                  { k: 'Temp', v: '37.1°C' },
+                ]}
+              />
+              <LiveStatCard
+                label="Beds today"
+                value="128"
+                unit="+6 free"
+                icon={BedDouble}
+                bar={66}
+                meta={[{ k: 'Occupancy', v: '66%' }]}
+              />
+            </motion.div>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-white/60">
-            <Shield className="h-4 w-4" />
-            <span>JWT auth · audit trails · role-gated access</span>
+          {/* Footer */}
+          <div className="flex items-center gap-2 text-xs text-white/60 shrink-0">
+            <Shield className="h-4 w-4 shrink-0" />
+            <span className="truncate">JWT auth · audit trails · role-gated access</span>
           </div>
         </div>
-      </div>
+      </aside>
 
-      {/* Right form panel */}
-      <div className="flex-1 overflow-y-auto relative">
-        <div className="absolute inset-0 -z-10 lg:hidden">
-          <div className="fixed inset-0 bg-gradient-to-br from-ink-900 via-ink-950 to-ink-900" />
-          <div className="fixed top-0 right-0 h-[400px] w-[400px] rounded-full bg-brand-500/15 blur-3xl" />
+      {/* ── Right form panel ──────────────────────────────────────── */}
+      <main className="relative flex-1 lg:basis-1/2 lg:overflow-y-auto bg-ink-900">
+        {/* Mobile-only background — kept inside the panel, no fixed positioning */}
+        <div className="absolute inset-0 -z-0 lg:hidden pointer-events-none overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-ink-900 via-ink-950 to-ink-900" />
+          <div className="absolute -top-24 -right-24 h-[360px] w-[360px] rounded-full bg-brand-500/15 blur-3xl" />
         </div>
 
-        <div className="min-h-full w-full flex flex-col items-center justify-center p-6 sm:p-10">
+        {/* Safe-centered form: m-auto centers when there's room, allows natural scroll otherwise */}
+        <div className="relative z-10 min-h-full w-full flex px-6 py-10 sm:px-10 sm:py-12">
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35 }}
-            className="w-full max-w-sm space-y-7 py-8"
+            className="m-auto w-full max-w-sm space-y-6"
           >
-          <div className="lg:hidden flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lg shadow-brand-600/30">
-              <Activity className="h-5 w-5 text-white" strokeWidth={2.5} />
+            <div className="lg:hidden flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lg shadow-brand-600/30">
+                <Activity className="h-5 w-5 text-white" strokeWidth={2.5} />
+              </div>
+              <div>
+                <p className="text-base font-bold text-white leading-tight">Hospify</p>
+                <p className="text-[10px] text-ink-200 uppercase tracking-widest font-medium">
+                  HMS
+                </p>
+              </div>
             </div>
+
             <div>
-              <p className="text-base font-bold text-white">Hospify</p>
-              <p className="text-[10px] text-ink-200 uppercase tracking-widest font-medium">
-                HMS
+              <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                Sign in to your workspace
+              </h2>
+              <p className="mt-2 text-sm text-ink-200">
+                Enter your email and password to access Hospify.
               </p>
             </div>
-          </div>
 
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-              Sign in to your workspace
-            </h2>
-            <p className="mt-2 text-sm text-ink-200">
-              Enter your email and password to access Hospify.
-            </p>
-          </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <Input
+                label="Email address"
+                type="email"
+                required
+                autoFocus
+                autoComplete="email"
+                placeholder="you@hospify.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                leftIcon={<Mail className="h-4 w-4" />}
+              />
+              <Input
+                label="Password"
+                type="password"
+                required
+                autoComplete="current-password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                leftIcon={<Lock className="h-4 w-4" />}
+              />
+              <Button
+                type="submit"
+                isLoading={loading}
+                size="lg"
+                className="w-full"
+                rightIcon={!loading ? <ArrowRight className="h-4 w-4" /> : undefined}
+              >
+                {loading ? 'Signing in…' : 'Sign in'}
+              </Button>
+            </form>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              label="Email address"
-              type="email"
-              required
-              autoFocus
-              autoComplete="email"
-              placeholder="you@hospify.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              leftIcon={<Mail className="h-4 w-4" />}
-            />
-            <Input
-              label="Password"
-              type="password"
-              required
-              autoComplete="current-password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              leftIcon={<Lock className="h-4 w-4" />}
-            />
-            <Button
-              type="submit"
-              isLoading={loading}
-              size="lg"
-              className="w-full"
-              rightIcon={!loading ? <ArrowRight className="h-4 w-4" /> : undefined}
-            >
-              {loading ? 'Signing in…' : 'Sign in'}
-            </Button>
-          </form>
-
-          <div className="rounded-xl border border-ink-500/40 bg-ink-800/60 p-4">
-            <p className="text-[11px] uppercase tracking-widest text-ink-300 font-semibold mb-3">
-              Demo accounts <span className="text-ink-200 normal-case font-normal tracking-normal">(password: Password123!)</span>
-            </p>
-            <ul className="space-y-1.5">
-              {DEMO_ACCOUNTS.map((d) => (
-                <li key={d.email}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEmail(d.email);
-                      setPassword('Password123!');
-                    }}
-                    className="group w-full flex items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-ink-700/60 transition-colors"
-                  >
-                    <span className="font-mono text-ink-100 group-hover:text-white truncate">
-                      {d.email}
-                    </span>
-                    <span className="flex items-center gap-1 shrink-0 text-ink-300 group-hover:text-brand-400">
-                      {d.role}
-                      <ChevronRight className="h-3 w-3" />
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </motion.div>
+            <div className="rounded-xl border border-ink-500/40 bg-ink-800/60 p-4">
+              <p className="text-[11px] uppercase tracking-widest text-ink-300 font-semibold mb-3">
+                Demo accounts{' '}
+                <span className="text-ink-200 normal-case font-normal tracking-normal">
+                  (password: Password123!)
+                </span>
+              </p>
+              <ul className="space-y-1.5">
+                {DEMO_ACCOUNTS.map((d) => (
+                  <li key={d.email}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEmail(d.email);
+                        setPassword('Password123!');
+                      }}
+                      className="group w-full flex items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-ink-700/60 transition-colors"
+                    >
+                      <span className="font-mono text-ink-100 group-hover:text-white truncate">
+                        {d.email}
+                      </span>
+                      <span className="flex items-center gap-1 shrink-0 text-ink-300 group-hover:text-brand-400">
+                        {d.role}
+                        <ChevronRight className="h-3 w-3" />
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </motion.div>
         </div>
+      </main>
+    </div>
+  );
+}
+
+/** Compact in-flow live stat card — replaces the previous absolute floaters. */
+function LiveStatCard({ label, value, unit, icon: Icon, meta = [], pings = false, bar }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-md p-3.5 shadow-2xl shadow-black/30">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-white/60 truncate">
+          {label}
+        </p>
+        {pings ? (
+          <span className="relative flex h-2 w-2 shrink-0">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-vital-400 opacity-75 animate-ping" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-vital-500" />
+          </span>
+        ) : (
+          <Icon className="h-3.5 w-3.5 text-white/50 shrink-0" />
+        )}
       </div>
+      <div className="mt-1.5 flex items-end gap-2">
+        <p className="text-xl font-bold text-white tabular-nums leading-none">{value}</p>
+        <p className="text-[11px] text-white/60 mb-0.5 truncate">{unit}</p>
+      </div>
+      {bar != null && (
+        <div className="mt-2.5 h-1.5 rounded-full bg-white/10 overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-brand-500 to-vital-500"
+            style={{ width: `${bar}%` }}
+          />
+        </div>
+      )}
+      {meta.length > 0 && !bar && (
+        <div className="mt-2.5 grid grid-cols-2 gap-1.5 text-[10px]">
+          {meta.map((m) => (
+            <div key={m.k} className="rounded-md bg-white/5 px-1.5 py-1">
+              <p className="text-white/50 leading-none">{m.k}</p>
+              <p className="text-white font-semibold tabular-nums mt-0.5">{m.v}</p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -343,60 +424,8 @@ function LoginHeroArt() {
         />
       </svg>
 
-      {/* Floating "live" stat card — subtle proof of life */}
-      <motion.div
-        initial={{ opacity: 0, y: 16, x: -8 }}
-        animate={{ opacity: 1, y: 0, x: 0 }}
-        transition={{ duration: 0.6, delay: 0.4 }}
-        className="absolute right-10 top-20 hidden xl:block w-56 rounded-xl border border-white/10 bg-white/5 backdrop-blur-md p-4 shadow-2xl shadow-black/40"
-      >
-        <div className="flex items-center justify-between">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/60">
-            Vitals · live
-          </p>
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full rounded-full bg-vital-400 opacity-75 animate-ping" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-vital-500" />
-          </span>
-        </div>
-        <p className="mt-1.5 text-2xl font-bold text-white tabular-nums">
-          72 <span className="text-xs text-white/60 font-medium">bpm</span>
-        </p>
-        <div className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
-          <div className="rounded-md bg-white/5 px-2 py-1.5">
-            <p className="text-white/50">SpO₂</p>
-            <p className="text-white font-semibold tabular-nums">98%</p>
-          </div>
-          <div className="rounded-md bg-white/5 px-2 py-1.5">
-            <p className="text-white/50">Temp</p>
-            <p className="text-white font-semibold tabular-nums">37.1°C</p>
-          </div>
-        </div>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 16, x: 8 }}
-        animate={{ opacity: 1, y: 0, x: 0 }}
-        transition={{ duration: 0.6, delay: 0.55 }}
-        className="absolute left-12 bottom-32 hidden xl:block w-52 rounded-xl border border-white/10 bg-white/5 backdrop-blur-md p-4 shadow-2xl shadow-black/40"
-      >
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-white/60">
-          Beds today
-        </p>
-        <div className="mt-2 flex items-end gap-3">
-          <p className="text-2xl font-bold text-white tabular-nums leading-none">128</p>
-          <p className="text-[11px] text-vital-300 font-semibold mb-0.5">
-            +6 free
-          </p>
-        </div>
-        <div className="mt-3 h-1.5 rounded-full bg-white/10 overflow-hidden">
-          <div className="h-full w-2/3 bg-gradient-to-r from-brand-500 to-vital-500" />
-        </div>
-        <p className="mt-1.5 text-[10px] text-white/50">66% occupancy</p>
-      </motion.div>
-
       {/* Bottom vignette so text never fights the art */}
-      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-ink-950 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-ink-950 to-transparent pointer-events-none" />
     </div>
   );
 }

@@ -78,13 +78,13 @@ export default function Patients() {
   );
   const [viewId, setViewId] = useState(null);
 
+  // Clear `location.state` after the slide-over has consumed it, so a refresh
+  // doesn't re-open it. Initial open state is set lazily above via useState.
   useEffect(() => {
-    if (location.state?.openCreate && canCreate) {
-      setOpenCreate(true);
-      // Clean up the state so refreshing doesn't re-open it
+    if (location.state?.openCreate) {
       window.history.replaceState({}, '', location.pathname);
     }
-  }, [location.state?.openCreate, location.pathname, canCreate]);
+  }, [location.state?.openCreate, location.pathname]);
 
   // ── Derive per-patient status & last-visit from real backend data ──
   // Status is "Admitted" if currently in active admissions, "Active" otherwise.

@@ -14,7 +14,6 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  Plus,
 } from 'lucide-react';
 import { useAuth } from '../context/auth-context';
 import Avatar from '../components/ui/Avatar';
