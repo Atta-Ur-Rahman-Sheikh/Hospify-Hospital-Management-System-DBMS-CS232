@@ -1,186 +1,431 @@
-import { useState, useEffect } from 'react';
-import api from '../api/axios';
+import { useState } from 'react';
+import {
+  ShieldCheck,
+  Users as UsersIcon,
+  History,
+  CloudUpload,
+  CloudDownload,
+  Plus,
+  Search,
+  RefreshCw,
+} from 'lucide-react';
+import {
+  useUsers,
+  useAuditLog,
+  useToggleUserStatus,
+  useCreateUser,
+  useBackupPush,
+  useBackupPull,
+} from '../hooks/useAdmin';
+import { useToast } from '../components/ui/useToast';
+import { useConfirm } from '../components/ui/confirm-context';
+import PageHeader from '../components/ui/PageHeader';
+import { Card } from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import Badge from '../components/ui/Badge';
+import Avatar from '../components/ui/Avatar';
+import Input, { Select } from '../components/ui/Input';
+import { Table, THead, TBody, TR, TH, TD } from '../components/ui/Table';
+import { SkeletonTable } from '../components/ui/Skeleton';
+import EmptyState from '../components/ui/EmptyState';
+import Modal from '../components/ui/Modal';
+import { cn } from '../lib/cn';
+
+const ROLES = [
+  'super_admin', 'doctor', 'nurse', 'receptionist',
+  'lab_technician', 'pharmacist', 'billing_staff',
+];
 
 export default function Admin() {
-  const [users, setUsers] = useState([]);
-  const [auditLogs, setAuditLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('users'); // 'users' or 'audit'
+  const [tab, setTab] = useState('users'); // 'users' | 'audit'
+  const [search, setSearch] = useState('');
+  const [openCreate, setOpenCreate] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, [activeTab]);
+  const usersQ = useUsers();
+  const auditQ = useAuditLog();
+  const toggleStatus = useToggleUserStatus();
+  const push = useBackupPush();
+  const pull = useBackupPull();
+  const toast = useToast();
+  const confirm = useConfirm();
 
-  const fetchData = async () => {
+  const refetchActive = tab === 'users' ? usersQ.refetch : auditQ.refetch;
+  const isRefetching = tab === 'users' ? usersQ.isRefetching : auditQ.isRefetching;
+
+  const handleToggle = async (id, name, isActive) => {
     try {
-      setLoading(true);
-      if (activeTab === 'users') {
-        const res = await api.get('/admin/users');
-        setUsers(res.data);
-      } else {
-        const res = await api.get('/admin/audit-log');
-        setAuditLogs(res.data);
-      }
-      setError(null);
-    } catch (err) {
-      setError(`Failed to load ${activeTab} data.`);
-    } finally {
-      setLoading(false);
+      await toggleStatus.mutateAsync(id);
+      toast.success(`${name} ${isActive ? 'disabled' : 'enabled'}`);
+    } catch {
+      toast.error('Status update failed');
     }
   };
 
-  const toggleUserStatus = async (userId) => {
+  const handlePush = async () => {
+    const ok = await confirm({
+      title: 'Push to cloud?',
+      description: 'This will overwrite remote Firebase data with the current Postgres state.',
+      confirmLabel: 'Push to Firebase',
+      tone: 'warning',
+    });
+    if (!ok) return;
     try {
-      await api.patch(`/admin/users/${userId}/status`);
-      fetchData(); // Refresh list
+      await push.mutateAsync();
+      toast.success('Sync complete', 'Postgres → Firebase');
     } catch (err) {
-      alert("Failed to update user status.");
+      toast.error('Sync failed', err.response?.data?.error || err.message);
     }
   };
 
-  const handleBackupPush = async () => {
+  const handlePull = async () => {
+    const ok = await confirm({
+      title: 'Pull from cloud?',
+      description: 'This will replace local Postgres data with the latest Firebase snapshot.',
+      confirmLabel: 'Pull from Firebase',
+      tone: 'warning',
+    });
+    if (!ok) return;
     try {
-      if(!window.confirm("Push all local data to Firebase?")) return;
-      await api.post('/admin/backup/push');
-      alert("Postgres -> Firebase sync complete!");
+      await pull.mutateAsync();
+      toast.success('Sync complete', 'Firebase → Postgres');
     } catch (err) {
-      alert("Sync failed: " + (err.response?.data?.error || err.message));
-    }
-  };
-
-  const handleBackupPull = async () => {
-    try {
-      if(!window.confirm("Pull latest data from Firebase to local database?")) return;
-      await api.post('/admin/backup/pull');
-      alert("Firebase -> Postgres sync complete!");
-      fetchData(); // refresh anything needed
-    } catch (err) {
-      alert("Sync failed: " + (err.response?.data?.error || err.message));
+      toast.error('Sync failed', err.response?.data?.error || err.message);
     }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-heading font-bold text-slate-900">System Administration</h1>
-        <div className="flex space-x-3">
-          <button onClick={handleBackupPush} className="btn-secondary flex items-center">
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-            Push to Cloud
-          </button>
-          <button onClick={handleBackupPull} className="btn-secondary flex items-center">
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-            Pull from Cloud
-          </button>
-          <button className="btn-primary flex items-center">
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-            Add New User
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="System Administration"
+        description="Manage users, monitor activity, and back up to the cloud."
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              leftIcon={<CloudUpload className="h-4 w-4" />}
+              onClick={handlePush}
+              isLoading={push.isPending}
+            >
+              Push to cloud
+            </Button>
+            <Button
+              variant="secondary"
+              leftIcon={<CloudDownload className="h-4 w-4" />}
+              onClick={handlePull}
+              isLoading={pull.isPending}
+            >
+              Pull from cloud
+            </Button>
+            <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setOpenCreate(true)}>
+              Add User
+            </Button>
+          </>
+        }
+      />
 
-      <div className="flex space-x-1 border-b border-slate-200">
-        <button
-          onClick={() => setActiveTab('users')}
-          className={`py-2 px-4 text-sm font-medium border-b-2 outline-none transition-colors ${
-            activeTab === 'users' ? 'border-primary-500 text-primary-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-          }`}
-        >
-          User Management
-        </button>
-        <button
-          onClick={() => setActiveTab('audit')}
-          className={`py-2 px-4 text-sm font-medium border-b-2 outline-none transition-colors ${
-            activeTab === 'audit' ? 'border-primary-500 text-primary-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-          }`}
-        >
-          Audit Logs
-        </button>
-      </div>
-
-      {error && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-xl border border-red-200">
-          {error}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            {activeTab === 'users' ? (
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Name</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Email</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Role</th>
-                    <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-slate-200">
-                  {users.map((u) => (
-                    <tr key={u.user_id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{u.full_name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{u.email}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="badge bg-slate-100 text-slate-800 uppercase tracking-wider text-[10px]">{u.role}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <span className={`badge ${u.is_active ? 'badge-success' : 'badge-danger'}`}>
-                          {u.is_active ? 'Active' : 'Disabled'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button 
-                          onClick={() => toggleUserStatus(u.user_id)}
-                          className={u.is_active ? "text-red-600 hover:text-red-900" : "text-green-600 hover:text-green-900"}
-                        >
-                          {u.is_active ? 'Disable' : 'Enable'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Timestamp</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">User</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Action</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Entity</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Details</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-slate-200">
-                  {auditLogs.map((log) => (
-                    <tr key={log.log_id} className="hover:bg-slate-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{new Date(log.timestamp).toLocaleString()}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">{log.user_name || `ID: ${log.user_id}`}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`badge uppercase ${log.action_type === 'INSERT' ? 'badge-success' : log.action_type === 'UPDATE' ? 'badge-info' : 'badge-danger'}`}>
-                          {log.action_type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{log.table_name} (ID: {log.record_id})</td>
-                      <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate" title={JSON.stringify(log.changes)}>
-                        {JSON.stringify(log.changes)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      {/* Tabs */}
+      <Card className="p-1.5">
+        <div className="inline-flex w-full sm:w-auto rounded-lg p-0.5">
+          <button
+            onClick={() => setTab('users')}
+            className={cn(
+              'flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md text-sm font-semibold transition-colors',
+              tab === 'users'
+                ? 'bg-brand-600 text-white shadow'
+                : 'text-ink-100 hover:text-white hover:bg-ink-700'
             )}
-          </div>
+          >
+            <UsersIcon className="h-4 w-4" />
+            Users
+          </button>
+          <button
+            onClick={() => setTab('audit')}
+            className={cn(
+              'flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md text-sm font-semibold transition-colors',
+              tab === 'audit'
+                ? 'bg-brand-600 text-white shadow'
+                : 'text-ink-100 hover:text-white hover:bg-ink-700'
+            )}
+          >
+            <History className="h-4 w-4" />
+            Audit log
+          </button>
         </div>
+      </Card>
+
+      <Card className="p-3">
+        <div className="flex flex-col sm:flex-row items-stretch gap-3">
+          <Input
+            placeholder={tab === 'users' ? 'Search users…' : 'Search audit log…'}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            leftIcon={<Search className="h-4 w-4" />}
+            containerClassName="flex-1"
+          />
+          <Button
+            variant="secondary"
+            leftIcon={<RefreshCw className={isRefetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />}
+            onClick={() => refetchActive()}
+          >
+            Refresh
+          </Button>
+        </div>
+      </Card>
+
+      {tab === 'users' ? (
+        <UsersTable query={usersQ} search={search} onToggle={handleToggle} toggling={toggleStatus.isPending} />
+      ) : (
+        <AuditTable query={auditQ} search={search} />
       )}
+
+      <CreateUserModal open={openCreate} onClose={() => setOpenCreate(false)} />
     </div>
+  );
+}
+
+function UsersTable({ query, search, onToggle, toggling }) {
+  if (query.isLoading) return <SkeletonTable rows={6} cols={5} />;
+  if (query.isError)   return <EmptyState icon={ShieldCheck} title="Couldn't load users" />;
+
+  const q = search.trim().toLowerCase();
+  const users = (query.data || []).filter((u) => {
+    if (!q) return true;
+    return (
+      u.full_name?.toLowerCase().includes(q) ||
+      u.email?.toLowerCase().includes(q) ||
+      u.role?.toLowerCase().includes(q)
+    );
+  });
+
+  if (!users.length) return <EmptyState icon={UsersIcon} title="No users match" />;
+
+  return (
+    <Table>
+      <THead>
+        <TR hoverable={false}>
+          <TH>Name</TH>
+          <TH>Email</TH>
+          <TH>Role</TH>
+          <TH align="center">Status</TH>
+          <TH>Joined</TH>
+          <TH align="right">Actions</TH>
+        </TR>
+      </THead>
+      <TBody>
+        {users.map((u) => (
+          <TR key={u.user_id}>
+            <TD>
+              <div className="flex items-center gap-3">
+                <Avatar name={u.full_name} size="sm" />
+                <p className="font-medium text-white truncate">{u.full_name}</p>
+              </div>
+            </TD>
+            <TD className="text-ink-100">{u.email}</TD>
+            <TD>
+              <Badge tone="neutral" size="sm" className="uppercase">
+                {u.role?.replace('_', ' ')}
+              </Badge>
+            </TD>
+            <TD align="center">
+              {u.is_active ? (
+                <Badge tone="success" size="sm" dot>Active</Badge>
+              ) : (
+                <Badge tone="danger" size="sm" dot>Disabled</Badge>
+              )}
+            </TD>
+            <TD>
+              <p className="text-xs text-ink-200">
+                {u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}
+              </p>
+            </TD>
+            <TD align="right">
+              <Button
+                size="sm"
+                variant={u.is_active ? 'danger' : 'success'}
+                isLoading={toggling}
+                onClick={() => onToggle(u.user_id, u.full_name, u.is_active)}
+              >
+                {u.is_active ? 'Disable' : 'Enable'}
+              </Button>
+            </TD>
+          </TR>
+        ))}
+      </TBody>
+    </Table>
+  );
+}
+
+function AuditTable({ query, search }) {
+  if (query.isLoading) return <SkeletonTable rows={8} cols={5} />;
+  if (query.isError)   return <EmptyState icon={History} title="Couldn't load audit log" />;
+
+  const q = search.trim().toLowerCase();
+  const logs = (query.data || []).filter((l) => {
+    if (!q) return true;
+    return (
+      l.user_name?.toLowerCase().includes(q) ||
+      l.action_type?.toLowerCase().includes(q) ||
+      l.table_name?.toLowerCase().includes(q) ||
+      String(l.record_id || '').includes(q)
+    );
+  });
+
+  if (!logs.length) return <EmptyState icon={History} title="No log entries match" />;
+
+  const ACTION_TONE = {
+    INSERT: 'success',
+    UPDATE: 'info',
+    DELETE: 'danger',
+  };
+
+  return (
+    <Table>
+      <THead>
+        <TR hoverable={false}>
+          <TH>When</TH>
+          <TH>User</TH>
+          <TH>Action</TH>
+          <TH>Entity</TH>
+          <TH>Changes</TH>
+        </TR>
+      </THead>
+      <TBody>
+        {logs.map((l) => (
+          <TR key={l.log_id}>
+            <TD>
+              <p className="text-sm text-white tabular-nums">
+                {new Date(l.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </p>
+              <p className="text-xs text-ink-200">
+                {new Date(l.timestamp).toLocaleDateString()}
+              </p>
+            </TD>
+            <TD>
+              <div className="flex items-center gap-2">
+                <Avatar name={l.user_name || `User ${l.user_id}`} size="xs" />
+                <p className="text-sm text-white truncate max-w-[180px]">
+                  {l.user_name || `User #${l.user_id}`}
+                </p>
+              </div>
+            </TD>
+            <TD>
+              <Badge tone={ACTION_TONE[l.action_type] || 'neutral'} size="sm">
+                {l.action_type}
+              </Badge>
+            </TD>
+            <TD>
+              <p className="text-sm text-ink-100 font-mono">
+                {l.table_name}{' '}
+                {l.record_id != null && (
+                  <span className="text-ink-300">#{l.record_id}</span>
+                )}
+              </p>
+            </TD>
+            <TD>
+              <pre
+                className="font-mono text-[10px] text-ink-200 bg-ink-900 border border-ink-500/40 rounded px-2 py-1 max-w-[320px] truncate"
+                title={JSON.stringify(l.changes)}
+              >
+                {JSON.stringify(l.changes)}
+              </pre>
+            </TD>
+          </TR>
+        ))}
+      </TBody>
+    </Table>
+  );
+}
+
+function CreateUserModal({ open, onClose }) {
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Create user"
+      description="The new user can sign in immediately with the credentials you set."
+    >
+      {open && <CreateUserForm onClose={onClose} />}
+    </Modal>
+  );
+}
+
+function CreateUserForm({ onClose }) {
+  const [form, setForm] = useState({ full_name: '', email: '', password: '', role: 'doctor' });
+  const [errors, setErrors] = useState({});
+  const create = useCreateUser();
+  const toast = useToast();
+
+  const setField = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const submit = async (e) => {
+    e?.preventDefault();
+    const errs = {};
+    if (!form.full_name.trim()) errs.full_name = 'Required';
+    if (!form.email.trim())     errs.email = 'Required';
+    if (!form.password)         errs.password = 'Required';
+    if (form.password && form.password.length < 8) errs.password = 'At least 8 characters';
+    setErrors(errs);
+    if (Object.keys(errs).length) return;
+    try {
+      await create.mutateAsync({
+        full_name: form.full_name.trim(),
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+        role: form.role,
+      });
+      toast.success('User created', form.full_name);
+      onClose();
+    } catch (err) {
+      toast.error('Could not create user', err.response?.data?.error || 'Unknown error');
+    }
+  };
+
+  return (
+    <form onSubmit={submit} className="space-y-4">
+        <Input
+          label="Full name"
+          value={form.full_name}
+          onChange={setField('full_name')}
+          error={errors.full_name}
+          required
+        />
+        <Input
+          label="Email"
+          type="email"
+          value={form.email}
+          onChange={setField('email')}
+          error={errors.email}
+          required
+        />
+        <Input
+          label="Password"
+          type="password"
+          value={form.password}
+          onChange={setField('password')}
+          error={errors.password}
+          hint={!errors.password ? 'Minimum 8 characters' : undefined}
+          required
+        />
+        <Select
+          label="Role"
+          value={form.role}
+          onChange={setField('role')}
+        >
+          {ROLES.map((r) => (
+            <option key={r} value={r}>{r.replace('_', ' ')}</option>
+          ))}
+        </Select>
+
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-ink-500/40">
+          <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button
+            type="submit"
+            isLoading={create.isPending}
+            leftIcon={!create.isPending ? <Plus className="h-4 w-4" /> : undefined}
+          >
+            Create
+          </Button>
+        </div>
+    </form>
   );
 }

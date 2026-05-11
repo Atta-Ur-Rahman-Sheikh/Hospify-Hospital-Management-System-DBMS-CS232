@@ -1,71 +1,176 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-heading: 'Outfit', 'Inter', sans-serif;
+  /* Typography */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --color-primary-50: #eff6ff;
+  /* Brand — electric blue */
+  --color-brand-50:  #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-800: #1e40af;
+  --color-brand-900: #1e3a8a;
+
+  /* Backwards-compat alias for old `primary-*` utility usages */
+  --color-primary-50:  #eff6ff;
   --color-primary-100: #dbeafe;
   --color-primary-500: #3b82f6;
   --color-primary-600: #2563eb;
   --color-primary-700: #1d4ed8;
 
-  --color-surface-50: #f8fafc;
-  --color-surface-100: #f1f5f9;
-  --color-surface-800: #1e293b;
-  --color-surface-900: #0f172a;
+  /* Surfaces — deep navy */
+  --color-ink-950: #060912;
+  --color-ink-900: #0A0F1E;   /* primary background */
+  --color-ink-800: #0F1629;
+  --color-ink-700: #141C33;
+  --color-ink-600: #1A2340;
+  --color-ink-500: #1E293B;   /* subtle border */
+  --color-ink-400: #2A3650;
+  --color-ink-300: #475569;
+  --color-ink-200: #94A3B8;
+  --color-ink-100: #CBD5E1;
+  --color-ink-50:  #E2E8F0;
+
+  /* Vitals — teal */
+  --color-vital-50:  #f0fdfa;
+  --color-vital-100: #ccfbf1;
+  --color-vital-400: #2dd4bf;
+  --color-vital-500: #14b8a6;
+  --color-vital-600: #0D9488;
+  --color-vital-700: #0f766e;
+
+  /* Semantic */
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-warn-500:   #f59e0b;
+  --color-warn-600:   #d97706;
 }
 
-/* Base styles */
+/* Base */
 @layer base {
+  html, body, #root {
+    height: 100%;
+  }
   body {
-    @apply bg-slate-50 text-slate-900 font-sans antialiased;
+    @apply bg-ink-900 text-ink-50 font-sans antialiased;
+    font-feature-settings: "cv11", "ss01", "ss03";
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading tracking-tight text-white;
+  }
+  ::selection {
+    background: var(--color-brand-600);
+    color: white;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-heading tracking-tight;
+  /* Scrollbar */
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb {
+    background: var(--color-ink-500);
+    border-radius: 999px;
+    border: 2px solid var(--color-ink-900);
   }
+  *::-webkit-scrollbar-thumb:hover { background: var(--color-ink-400); }
 }
 
-/* Custom components */
+/* Legacy component aliases — preserve any leftover className usage from old code */
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center justify-center px-4 py-2 bg-primary-600 text-white rounded-lg font-medium shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 bg-brand-600 text-white rounded-lg font-medium shadow-sm hover:bg-brand-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-900 transition-colors;
   }
-  
   .btn-secondary {
-    @apply inline-flex items-center justify-center px-4 py-2 bg-white text-slate-700 border border-slate-300 rounded-lg font-medium shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 bg-ink-800 text-ink-50 border border-ink-500 rounded-lg font-medium hover:bg-ink-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-900 transition-colors;
   }
-
   .card {
-    @apply bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden;
+    @apply bg-ink-800 rounded-xl border border-ink-500/60 shadow-lg shadow-black/20;
   }
-
   .input-field {
-    @apply block w-full rounded-lg border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm py-2 px-3 border;
+    @apply block w-full rounded-lg bg-ink-900 border border-ink-500 px-3 py-2 text-sm text-ink-50 placeholder-ink-300 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition;
   }
-  
   .label-text {
-    @apply block text-sm font-medium text-slate-700 mb-1;
+    @apply block text-xs font-medium text-ink-100 mb-1.5 uppercase tracking-wider;
   }
-
   .badge {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
-  
-  .badge-success {
-    @apply bg-green-100 text-green-800;
-  }
-  
-  .badge-warning {
-    @apply bg-yellow-100 text-yellow-800;
-  }
-  
-  .badge-danger {
-    @apply bg-red-100 text-red-800;
-  }
-  
-  .badge-info {
-    @apply bg-blue-100 text-blue-800;
-  }
+  .badge-success { @apply bg-vital-500/15 text-vital-400 ring-1 ring-inset ring-vital-500/30; }
+  .badge-warning { @apply bg-warn-500/15 text-warn-500 ring-1 ring-inset ring-warn-500/30; }
+  .badge-danger  { @apply bg-danger-500/15 text-danger-500 ring-1 ring-inset ring-danger-500/30; }
+  .badge-info    { @apply bg-brand-500/15 text-brand-400 ring-1 ring-inset ring-brand-500/30; }
+}
+
+/* Custom keyframes */
+@keyframes shimmer {
+  0%   { background-position: -800px 0; }
+  100% { background-position: 800px 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(30, 41, 59, 0.4) 0%,
+    rgba(42, 54, 80, 0.7) 50%,
+    rgba(30, 41, 59, 0.4) 100%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.6s infinite linear;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in-up { animation: fadeInUp 0.4s ease-out both; }
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(0.92); }
+}
+.pulse-dot { animation: pulseDot 1.8s ease-in-out infinite; }
+
+@keyframes ekgPulse {
+  0%   { stroke-dashoffset: 240; opacity: 0.3; }
+  35%  { opacity: 1; }
+  70%  { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: -240; opacity: 0; }
+}
+.ekg-line {
+  stroke-dasharray: 240;
+  animation: ekgPulse 3.2s ease-in-out infinite;
+}
+
+/* Subtle conic-gradient accent reused in hero / login */
+.conic-accent {
+  background:
+    radial-gradient(circle at 25% 0%, rgba(37, 99, 235, 0.18), transparent 45%),
+    radial-gradient(circle at 95% 60%, rgba(13, 148, 136, 0.14), transparent 45%);
+}
+
+/* Hairline divider used inside cards */
+.hairline {
+  background-image: linear-gradient(to right, transparent, rgba(148, 163, 184, 0.18), transparent);
+  height: 1px;
+}
+
+/* Recharts dark tooltip */
+.recharts-default-tooltip {
+  background: var(--color-ink-700) !important;
+  border: 1px solid var(--color-ink-500) !important;
+  border-radius: 10px !important;
+  color: var(--color-ink-50) !important;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.45) !important;
+}
+.recharts-tooltip-label {
+  color: var(--color-ink-100) !important;
+}
+.recharts-tooltip-cursor {
+  fill: rgba(37, 99, 235, 0.06) !important;
 }

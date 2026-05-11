@@ -2,7 +2,7 @@ import os
 import io  
 import psycopg2
 from PIL import Image
-from dotenv import load_dotenv
+from dotenv import load_dotenv 
 
 # Load the variables from .env into the environment
 load_dotenv()

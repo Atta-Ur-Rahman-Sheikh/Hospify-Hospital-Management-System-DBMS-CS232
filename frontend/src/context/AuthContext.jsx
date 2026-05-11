@@ -1,10 +1,7 @@
-import { createContext, useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
-
-const AuthContext = createContext();
-
-export const useAuth = () => useContext(AuthContext);
+import { AuthContext } from './auth-context';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -16,7 +13,7 @@ export const AuthProvider = ({ children }) => {
       try {
         const response = await api.get('/auth/me');
         setUser(response.data);
-      } catch (error) {
+      } catch {
         setUser(null);
       } finally {
         setLoading(false);

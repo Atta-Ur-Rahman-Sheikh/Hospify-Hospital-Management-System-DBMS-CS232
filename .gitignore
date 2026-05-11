@@ -1,5 +1,5 @@
 .env
-prompt.md
+service_key.json
 test_connection_firebase.py
 test_connection_gemini_db.py
 .venv
@@ -12,3 +12,4 @@ dist/
 .DS_Store
 firebase.json
 frontend/.env
+prompt.md
