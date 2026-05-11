@@ -215,7 +215,7 @@ python -m venv .venv
 # source .venv/bin/activate     # macOS / Linux
 
 # install python deps
-pip install -r requirements.txt
+pip install -r requirements.txt 
 
 # create the database (run inside psql)
 createdb Hospify_DBMS
