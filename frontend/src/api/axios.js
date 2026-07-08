@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',
+  // baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',
+  baseURL: '/api',
   withCredentials: true, // Important for sending/receiving cookies (JWTs)
   headers: {
     'Content-Type': 'application/json',
@@ -21,7 +22,8 @@ api.interceptors.response.use(
       try {
         // Attempt to refresh the token using the refresh cookie
         await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/auth/refresh`,
+          // `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/auth/refresh`,
+          '/api/auth/refresh',
           {},
           { withCredentials: true }
         );
